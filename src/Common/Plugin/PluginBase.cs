@@ -4,11 +4,14 @@ namespace Ollio.Plugin
 {
     public interface PluginBase
     {
-        string[] Commands { get; }
+        string Id { get; }
         string Name { get; }
-        Guid Serial { get; }
         int Version { get; }
+        string[] Commands { get; }
     
         PluginResponse Invoke(PluginRequest request);
+        void Startup() {
+            Console.WriteLine("Doing nothing");
+        }
     }
 }

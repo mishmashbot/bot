@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using CommandLine;
 using Ollio.Plugin;
 using Ollio.Server.Helpers;
@@ -8,10 +9,12 @@ namespace Ollio.Server
 {
     class Program
     {
+        static ManualResetEvent QuitEvent = new ManualResetEvent(false);
+
         public class Options
         {
-            [Option('c', "config-dir", Required = false, HelpText = "Location of configuration directory", Default = "config")]
-            public string ConfigDirectory { get; set; }
+            //[Option('c', "config-dir", Required = false, HelpText = "Location of configuration directory", Default = "config")]
+            //public string ConfigDirectory { get; set; }
 
             //[Option("plugins-dir", Required = false, HelpText = "Location of plugins directory", Default = "plugins")]
             //public string PluginsDirectory { get; set; }
@@ -19,6 +22,11 @@ namespace Ollio.Server
 
         static void Main(string[] args)
         {
+            Console.CancelKeyPress += (sender, eArgs) => {
+                QuitEvent.Set();
+                eArgs.Cancel = true;
+            };
+
             try
             {
                 ParseCommandLineArguments(args);
@@ -36,19 +44,28 @@ namespace Ollio.Server
 
                 ConsoleUtilities.PrintSuccessMessage($"Loaded {pluginsCount} plugins with {commandsCount} commands");
 
-                var request = new PluginRequest
+                SetupContexts();
+
+                /*var request = new PluginRequest
                 {
                     RawInput = "hello2"
                 };
 
-                var pluginResponse = PluginLoader.InvokePlugin(request);
+                var pluginResponse = PluginLoader.HandleRequest(request);
 
-                ConsoleUtilities.PrintDebugMessage(pluginResponse.RawOutput);
+                ConsoleUtilities.PrintDebugMessage(pluginResponse.RawOutput);*/
             }
             catch (Exception e)
             {
                 ConsoleUtilities.PrintErrorMessage(e);
             }
+
+            QuitEvent.WaitOne();
+        }
+
+        static void ParseConfig()
+        {
+
         }
 
         static void ParseCommandLineArguments(string[] arguments)
@@ -59,6 +76,21 @@ namespace Ollio.Server
                     //AppArguments.ConfigDirectory = o.ConfigDirectory
                     //    .Replace("\\", "/"); // TODO: Parse this safer
                 });
+        }
+
+        static void SetupContexts()
+        {
+            string[] pluginsToLoad = new string[] {
+                "ollio.helloworld"
+            };
+
+            foreach(string pluginToLoad in pluginsToLoad) {
+                PluginBase foundPlugin = PluginLoader.GetPluginById(pluginToLoad);
+
+                if(foundPlugin != null) {
+                    PluginLoader.StartupPlugin(pluginToLoad);
+                }
+            }
         }
     }
 }

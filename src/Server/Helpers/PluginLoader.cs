@@ -13,20 +13,45 @@ namespace Ollio.Server.Helpers
     //       PowerShell plugins?
     public static class PluginLoader
     {
-        public static IDictionary<string, Guid> Commands { get; set; }
+        public static IDictionary<string, string> Commands { get; set; }
         public static IEnumerable<PluginBase> Plugins { get; set; }
 
-        public static PluginResponse InvokePlugin(PluginRequest request)
+        public static PluginBase GetPluginById(string pluginId)
+        {
+            var foundPlugins = Plugins.Where(p => p.Id == pluginId);
+            var foundPluginsAmount = foundPlugins.Count();
+
+            if(foundPluginsAmount > 1) {
+                ConsoleUtilities.PrintWarningMessage($"Found more than one plugin with the ID '{pluginId}'");
+            } else if(foundPluginsAmount == 0) {
+                ConsoleUtilities.PrintWarningMessage($"Unable to find a plugin with the ID '{pluginId}'");
+            }
+
+            return foundPlugins.FirstOrDefault();
+        }
+
+        public static PluginResponse HandleRequest(PluginRequest request)
         {
             PluginResponse response = null;
-            Guid serial = Guid.Empty;
+            string pluginId;
             
-            if(Commands.TryGetValue(request.RawInput, out serial)) {
-                PluginBase plugin = Plugins.FirstOrDefault(p => p.Serial == serial);
+            if(Commands.TryGetValue(request.RawInput, out pluginId)) {
+                PluginBase plugin = GetPluginById(pluginId);
                 response = plugin.Invoke(request);
             }
 
             return response;
+        }
+
+        public static void StartupPlugin(string pluginId)
+        {
+            PluginBase plugin = GetPluginById(pluginId);
+
+            if(plugin != null) {
+                plugin.Startup();
+            } else {
+                ConsoleUtilities.PrintWarningMessage($"Unable to start '{pluginId}' as it was not found");
+            }
         }
 
         public static int UpdatePlugins()
@@ -44,12 +69,12 @@ namespace Ollio.Server.Helpers
 
         public static int UpdatePluginCommands()
         {
-            Commands = new Dictionary<string, Guid>();
+            Commands = new Dictionary<string, string>();
 
             foreach(var plugin in Plugins)
             {
                 foreach(var command in plugin.Commands) {
-                    Commands.Add(command, plugin.Serial);
+                    Commands.Add(command, plugin.Id);
                 }
             }
 
