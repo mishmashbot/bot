@@ -1,6 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using Figgle;
 using Microsoft.DotNet.PlatformAbstractions;
 
 namespace Mishmash.Utilities
@@ -37,18 +39,21 @@ namespace Mishmash.Utilities
 
         public static void PrintStartupMessage()
         {
-            string logo = @" __  __ _     _     __  __           _     
-|  \/  (_)___| |__ |  \/  | __ _ ___| |__  
-| |\/| | / __| '_ \| |\/| |/ _` / __| '_ \ 
-| |  | | \__ \ | | | |  | | (_| \__ \ | | |
-|_|  |_|_|___/_| |_|_|  |_|\__,_|___/_| |_|
-===========================================";
+            //string logo = @" __  __ _     _     __  __           _     
+//|  \/  (_)___| |__ |  \/  | __ _ ___| |__  
+//| |\/| | / __| '_ \| |\/| |/ _` / __| '_ \ 
+//| |  | | \__ \ | | | |  | | (_| \__ \ | | |
+//|_|  |_|_|___/_| |_|_|  |_|\__,_|___/_| |_|
+//===========================================";
+
+            string logo = FiggleFonts.Standard.Render("MishMash").TrimEnd();
+            string[] logoSplit = logo.Split('\n');
 
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine(logo);
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("---");
+            Console.WriteLine(new string('=', (logoSplit[logoSplit.Length-2].Length+1)));
             ResetForegroundColor();
         }
 
@@ -83,7 +88,7 @@ namespace Mishmash.Utilities
                     prefix = caller;
             #endif
 
-            prefix = $"[{prefix}] ";
+            prefix = $" [{prefix}] ";
             int prefixLength = prefix.Length;
             string prefixSpacer = new string(' ', prefixLength);
 
