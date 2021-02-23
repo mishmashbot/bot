@@ -1,7 +1,7 @@
 using System.IO;
 using System.Reflection;
 
-namespace Mishmash.Utilities
+namespace Ollio.Utilities
 {
     public class RuntimeUtilities
     {

@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace Mishmash.Server.Helpers
+namespace Ollio.Server.Helpers
 {
     class PluginLoadContext : AssemblyLoadContext
     {

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Mishmash.Plugin;
-using Mishmash.Utilities;
+using Ollio.Plugin;
+using Ollio.Utilities;
 
-namespace Mishmash.Server.Helpers
+namespace Ollio.Server.Helpers
 {
     // TODO: WASM plugins?
     //       Lua plugins?

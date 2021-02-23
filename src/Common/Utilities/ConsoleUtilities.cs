@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Figgle;
 using Microsoft.DotNet.PlatformAbstractions;
 
-namespace Mishmash.Utilities
+namespace Ollio.Utilities
 {
     public class ConsoleUtilities
     {
@@ -38,7 +38,7 @@ namespace Mishmash.Utilities
 
         public static void PrintStartupMessage()
         {
-            string logo = FiggleFonts.Standard.Render("MishMash").TrimEnd();
+            string logo = FiggleFonts.Standard.Render("Ollio").TrimEnd();
             string[] logoSplit = logo.Split('\n');
 
             Console.ForegroundColor = ConsoleColor.Yellow;

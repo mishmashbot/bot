@@ -1,5 +1,5 @@
 
-namespace Mishmash.Plugin
+namespace Ollio.Plugin
 {
     public class PluginResponse
     {

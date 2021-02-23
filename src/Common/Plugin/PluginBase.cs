@@ -1,6 +1,6 @@
 using System;
 
-namespace Mishmash.Plugin
+namespace Ollio.Plugin
 {
     public interface PluginBase
     {

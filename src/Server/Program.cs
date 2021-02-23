@@ -1,10 +1,10 @@
 ﻿using System;
 using CommandLine;
-using Mishmash.Plugin;
-using Mishmash.Server.Helpers;
-using Mishmash.Utilities;
+using Ollio.Plugin;
+using Ollio.Server.Helpers;
+using Ollio.Utilities;
 
-namespace Mishmash.Server
+namespace Ollio.Server
 {
     class Program
     {

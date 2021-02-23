@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Mishmash
+namespace Ollio
 {
     public class Class1
     {

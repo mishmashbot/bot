@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Mishmash.Hooks.Telegram
+namespace Ollio.Hooks.Telegram
 {
     public class Class1
     {
