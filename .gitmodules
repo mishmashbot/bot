@@ -1,0 +1,3 @@
+[submodule "src/Plugins/HelloWorldPlugin"]
+	path = src/Plugins/HelloWorldPlugin
+	url = git@github.com:mishmashbot/plugin-helloworld.git
