@@ -6,7 +6,6 @@ using Telegram.Bot;
 using Telegram.Bot.Args;
 using Ollio.Config.Helpers;
 using Ollio.Config.State;
-using Ollio.Plugin;
 using Ollio.Server.Helpers;
 using Ollio.Utilities;
 
@@ -30,14 +29,13 @@ namespace Ollio.Server
             {
                 ConfigLoader.UpdateConfig();
 
-                ConsoleUtilities.PrintDebugMessage(ConfigState.Current.Owner.Telegram);
-
                 var pluginsCount = PluginLoader.UpdatePlugins();
                 var commandsCount = PluginLoader.UpdatePluginCommands();
 
-                if (commandsCount == 0)
+                if (pluginsCount == 0)
                 {
-                    // TODO: Handle no commands
+                    ConsoleUtilities.PrintWarningMessage("No plugins found. Exiting...");
+                    Environment.Exit(int.MinValue);
                 }
 
                 ConsoleUtilities.PrintSuccessMessage($"Loaded {pluginsCount} plugins with {commandsCount} commands");

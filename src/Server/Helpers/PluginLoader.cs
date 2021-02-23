@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Ollio.Plugin;
+using Telegram.Bot;
+using Ollio.Models;
+using Ollio.Models.Requests;
+using Ollio.Models.Responses;
 using Ollio.Utilities;
 
 namespace Ollio.Server.Helpers
@@ -43,12 +46,13 @@ namespace Ollio.Server.Helpers
             return response;
         }
 
-        public static void StartupPlugin(string pluginId, dynamic Client)
+        public static void StartupPlugin(string pluginId, dynamic Connection)
         {
             PluginBase plugin = GetPluginById(pluginId);
 
             if(plugin != null) {
                 plugin.Startup();
+                plugin.Startup(Connection);
                 // TODO: Is there some nice way we can not fire unneeded ones?
                 //       Is there a performance hit from doing this?
                 //plugin.Startup(Client.DiscordContext);
