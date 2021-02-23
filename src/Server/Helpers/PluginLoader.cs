@@ -43,12 +43,17 @@ namespace Ollio.Server.Helpers
             return response;
         }
 
-        public static void StartupPlugin(string pluginId)
+        public static void StartupPlugin(string pluginId, dynamic Client)
         {
             PluginBase plugin = GetPluginById(pluginId);
 
             if(plugin != null) {
                 plugin.Startup();
+                // TODO: Is there some nice way we can not fire unneeded ones?
+                //       Is there a performance hit from doing this?
+                //plugin.Startup(Client.DiscordContext);
+                //plugin.Startup(Client.IRCContext);
+                //plugin.Startup(Client.TelegramContext);
             } else {
                 ConsoleUtilities.PrintWarningMessage($"Unable to start '{pluginId}' as it was not found");
             }

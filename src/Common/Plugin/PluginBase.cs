@@ -1,4 +1,3 @@
-using System;
 
 namespace Ollio.Plugin
 {
@@ -10,8 +9,6 @@ namespace Ollio.Plugin
         string[] Commands { get; }
     
         PluginResponse Invoke(PluginRequest request);
-        void Startup() {
-            Console.WriteLine("Doing nothing");
-        }
+        void Startup() { }
     }
 }

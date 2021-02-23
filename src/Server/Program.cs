@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
-using CommandLine;
+using System.Threading.Tasks;
+using Telegram.Bot;
+using Telegram.Bot.Args;
+using Ollio.Config.Helpers;
+using Ollio.Config.State;
 using Ollio.Plugin;
 using Ollio.Server.Helpers;
 using Ollio.Utilities;
@@ -9,19 +14,13 @@ namespace Ollio.Server
 {
     class Program
     {
+        static List<TelegramBotClient> Connections = new List<TelegramBotClient>();
         static ManualResetEvent QuitEvent = new ManualResetEvent(false);
-
-        public class Options
-        {
-            //[Option('c', "config-dir", Required = false, HelpText = "Location of configuration directory", Default = "config")]
-            //public string ConfigDirectory { get; set; }
-
-            //[Option("plugins-dir", Required = false, HelpText = "Location of plugins directory", Default = "plugins")]
-            //public string PluginsDirectory { get; set; }
-        }
 
         static void Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            ConsoleUtilities.PrintStartupMessage();
             Console.CancelKeyPress += (sender, eArgs) => {
                 QuitEvent.Set();
                 eArgs.Cancel = true;
@@ -29,10 +28,9 @@ namespace Ollio.Server
 
             try
             {
-                ParseCommandLineArguments(args);
-                Console.OutputEncoding = System.Text.Encoding.UTF8;
+                ConfigLoader.UpdateConfig();
 
-                ConsoleUtilities.PrintStartupMessage();
+                ConsoleUtilities.PrintDebugMessage(ConfigState.Current.Owner.Telegram);
 
                 var pluginsCount = PluginLoader.UpdatePlugins();
                 var commandsCount = PluginLoader.UpdatePluginCommands();
@@ -44,7 +42,7 @@ namespace Ollio.Server
 
                 ConsoleUtilities.PrintSuccessMessage($"Loaded {pluginsCount} plugins with {commandsCount} commands");
 
-                SetupContexts();
+                //SetupClients();
 
                 /*var request = new PluginRequest
                 {
@@ -63,34 +61,50 @@ namespace Ollio.Server
             QuitEvent.WaitOne();
         }
 
-        static void ParseConfig()
+        static void SetupClients()
         {
-
-        }
-
-        static void ParseCommandLineArguments(string[] arguments)
-        {
-            Parser.Default.ParseArguments<Options>(arguments)
-                .WithParsed<Options>(o =>
-                {
-                    //AppArguments.ConfigDirectory = o.ConfigDirectory
-                    //    .Replace("\\", "/"); // TODO: Parse this safer
-                });
-        }
-
-        static void SetupContexts()
-        {
-            string[] pluginsToLoad = new string[] {
-                "ollio.helloworld"
+            string[] clients = new string[] {
+                "",
+                ""
             };
 
-            foreach(string pluginToLoad in pluginsToLoad) {
-                PluginBase foundPlugin = PluginLoader.GetPluginById(pluginToLoad);
-
-                if(foundPlugin != null) {
-                    PluginLoader.StartupPlugin(pluginToLoad);
+            foreach(string client in clients) {
+                var connection = new TelegramBotClient(client);
+                if(connection.TestApiAsync().Result) {
+                    Connections.Add(connection);
                 }
             }
+
+            foreach(var connection in Connections) {
+                string[] pluginsToLoad = new string[] {
+                    "ollio.helloworld"
+                };
+
+                foreach(string pluginToLoad in pluginsToLoad) {
+                    PluginBase foundPlugin = PluginLoader.GetPluginById(pluginToLoad);
+
+                    if(foundPlugin != null) {
+                        //PluginLoader.StartupPlugin(pluginToLoad, connection.Client);
+                    }
+                }
+
+                // switch(connection.Service) {
+                // case Connection.Services.Telegram:
+                connection.OnMessage += HandleMessage;
+            }
         }
+
+        static void HandleMessage(object sender, MessageEventArgs telegramMessageEvent)
+        {
+            Task.Run(() =>
+            {
+
+            });
+        }
+    }
+
+    public class ChatContext<T>
+    {
+        public T Client { get; set; } = default(T);
     }
 }

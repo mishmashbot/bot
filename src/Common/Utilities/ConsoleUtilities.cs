@@ -86,39 +86,42 @@ namespace Ollio.Utilities
                 status = caller;
 #endif
 
-            status = $" [{status}] ";
-            int prefixLength = status.Length;
-            string prefixSpacer = new string(' ', prefixLength);
-
-            Console.ForegroundColor = prefixColor;
-            Console.Write(status);
-
-            if(!String.IsNullOrEmpty(prefix))
+            if (!String.IsNullOrEmpty(message))
             {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($"({prefix}) ");
-            }
+                status = $" [{status}] ";
+                int prefixLength = status.Length;
+                string prefixSpacer = new string(' ', prefixLength);
 
-            Console.ForegroundColor = messageColor;
+                Console.ForegroundColor = prefixColor;
+                Console.Write(status);
 
-            using (var reader = new StringReader(message))
-            {
-                bool firstLine = true;
-                for (
-                    string messageLine = reader.ReadLine();
-                    messageLine != null;
-                    messageLine = reader.ReadLine()
-                )
+                if (!String.IsNullOrEmpty(prefix))
                 {
-                    if (!firstLine)
-                        Console.Write(prefixSpacer);
-
-                    Console.WriteLine(messageLine.Trim());
-                    firstLine = false;
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.Write($"({prefix}) ");
                 }
-            }
 
-            ResetForegroundColor();
+                Console.ForegroundColor = messageColor;
+
+                using (var reader = new StringReader(message))
+                {
+                    bool firstLine = true;
+                    for (
+                        string messageLine = reader.ReadLine();
+                        messageLine != null;
+                        messageLine = reader.ReadLine()
+                    )
+                    {
+                        if (!firstLine)
+                            Console.Write(prefixSpacer);
+
+                        Console.WriteLine(messageLine.Trim());
+                        firstLine = false;
+                    }
+                }
+
+                ResetForegroundColor();
+            }
         }
 
         static void ResetForegroundColor()

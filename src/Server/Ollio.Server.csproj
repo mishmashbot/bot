@@ -2,10 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Ollio.csproj" />
+    <ProjectReference Include="..\Config\Ollio.Config.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="Telegram.Bot" Version="15.7.1" />
   </ItemGroup>
 
   <PropertyGroup>
