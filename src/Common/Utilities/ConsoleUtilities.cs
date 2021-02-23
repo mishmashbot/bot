@@ -18,7 +18,7 @@ namespace Mishmash.Utilities
 
         public static void PrintErrorMessage(Exception exception, [CallerMemberName] string caller = null)
         {
-            
+
 #if DEBUG
             string message = $"{exception.ToString()}";
 #else
@@ -39,13 +39,6 @@ namespace Mishmash.Utilities
 
         public static void PrintStartupMessage()
         {
-            //string logo = @" __  __ _     _     __  __           _     
-//|  \/  (_)___| |__ |  \/  | __ _ ___| |__  
-//| |\/| | / __| '_ \| |\/| |/ _` / __| '_ \ 
-//| |  | | \__ \ | | | |  | | (_| \__ \ | | |
-//|_|  |_|_|___/_| |_|_|  |_|\__,_|___/_| |_|
-//===========================================";
-
             string logo = FiggleFonts.Standard.Render("MishMash").TrimEnd();
             string[] logoSplit = logo.Split('\n');
 
@@ -53,7 +46,7 @@ namespace Mishmash.Utilities
             Console.WriteLine(logo);
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine(new string('=', (logoSplit[logoSplit.Length-2].Length+1)));
+            Console.WriteLine(new string('=', (logoSplit[logoSplit.Length - 2].Length + 1)));
             ResetForegroundColor();
         }
 
@@ -83,10 +76,10 @@ namespace Mishmash.Utilities
             ConsoleColor messageColor = ConsoleColor.Gray
         )
         {
-            #if DEBUG
-                if(!String.IsNullOrEmpty(caller))
-                    prefix = caller;
-            #endif
+#if DEBUG
+            if (!String.IsNullOrEmpty(caller))
+                prefix = caller;
+#endif
 
             prefix = $" [{prefix}] ";
             int prefixLength = prefix.Length;
