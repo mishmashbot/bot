@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
+using CommandLine;
+using CommandLine.Text;
 using Microsoft.DotNet.PlatformAbstractions;
-using Ollio.Config.Helpers;
-using Ollio.Config.State;
+using Ollio.Config;
 using Ollio.Models;
 using Ollio.Server.Helpers;
 using Ollio.Utilities;
@@ -14,19 +16,52 @@ namespace Ollio.Server
         public static RuntimeInfo RuntimeInfo { get; set; }
         static ManualResetEvent QuitEvent = new ManualResetEvent(false);
 
-        static void Main(string[] args)
+        public class Arguments
+        {
+            /*[Option('c', "config", HelpText = "Location of configuration directory.")]
+            public string ConfigDirectory { get; set; }*/
+            [Option('n', "no-update", HelpText = "Stop plugins installing/updating from repository.")]
+            public bool NoUpdate { get; set; }
+            [Option("no-compile", HelpText = "Stop compilation of projects in ./plugins.")]
+            public bool NoCompile { get; set; }
+            [Option("no-joke", HelpText = "Be boring and supress the dad joke.")]
+            public bool NoJoke { get; set; }
+            [Option("no-logo", HelpText = "Supress the startup logo")]
+            public bool NoLogo { get; set; }
+        }
+
+        static async Task Main(string[] args)
         {
             SetRuntimeInfo();
-
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            ConsoleUtilities.PrintStartupMessage();
-            Console.CancelKeyPress += (sender, e) => {
+            
+            await Parser.Default.ParseArguments<Arguments>(args)
+                .WithParsedAsync(Run);
+        }
+
+        static async Task Run(Arguments arguments)
+        {
+            Console.CancelKeyPress += (sender, e) =>
+            {
                 QuitEvent.Set();
                 e.Cancel = true;
             };
 
             try
             {
+                if(!arguments.NoCompile)
+                    PluginLoader.NoCompile = true;
+
+                if(!arguments.NoLogo)
+                    ConsoleUtilities.PrintStartupMessage(RuntimeInfo);
+
+                if (!arguments.NoJoke)
+                {
+                    var dadJokeClient = new Ollio.Client.ICanHazDadJoke();
+                    var dadJoke = await dadJokeClient.Get();
+                    ConsoleUtilities.PrintInfoMessage(dadJoke.Joke);
+                }
+
                 ConfigLoader.UpdateConfig();
 
                 var pluginsCount = PluginLoader.UpdatePlugins();
@@ -45,6 +80,19 @@ namespace Ollio.Server
             }
 
             QuitEvent.WaitOne();
+        }
+
+        static void PrintHelp<T>(ParserResult<T> result)
+        {
+            var helpText = HelpText.AutoBuild(result, h =>
+            {
+                h.AdditionalNewLineAfterOption = false;
+                h.Heading = "Myapp 2.0.0-beta"; //fchange header
+                h.Copyright = "Copyright (c) 2019 Global.com"; //change copyright text
+                return HelpText.DefaultParsingErrorsHandler(result, h);
+            }, e => e);
+            Console.WriteLine(helpText);
+            Environment.Exit(0);
         }
 
         static void SetRuntimeInfo()

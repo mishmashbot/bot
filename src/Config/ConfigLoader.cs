@@ -2,10 +2,9 @@ using System.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Ollio.Config.Models;
-using Ollio.Config.State;
 using Ollio.Utilities;
 
-namespace Ollio.Config.Helpers
+namespace Ollio.Config
 {
     public class ConfigLoader
     {

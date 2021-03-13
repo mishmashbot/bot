@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <LanguageVersion>latest</LanguageVersion>
-    <TargetFramework>net6.0.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,6 +10,10 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.11.30" />
     <PackageReference Include="Microsoft.DotNet.PlatformAbstractions" Version="3.1.6" />
     <PackageReference Include="Telegram.Bot" Version="15.7.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--ProjectReference Include="..\..\lib\Telegram.Bot\src\Telegram.Bot\Telegram.Bot.csproj" /-->
   </ItemGroup>
 
 </Project>

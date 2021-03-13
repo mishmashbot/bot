@@ -1,6 +1,6 @@
 ﻿using Ollio.Config.Models;
 
-namespace Ollio.Config.State
+namespace Ollio.Config
 {
     public class ConfigState
     {

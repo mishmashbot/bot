@@ -15,6 +15,7 @@ namespace Ollio.Server.Helpers
     //       PowerShell plugins?
     public static class PluginLoader
     {
+        public static bool NoCompile { get; set; }
         public static Dictionary<PluginSubscription, IPlugin> Plugins { get; set; }
 
         public static List<PluginResponse> Invoke(Message message, Context context, Connection connection)
@@ -34,7 +35,7 @@ namespace Ollio.Server.Helpers
             )
             {
                 isCommand = true;
-                command = "ollio1";
+                command = "info";
             }
 
             if (isCommand)
@@ -45,11 +46,11 @@ namespace Ollio.Server.Helpers
                 {
                     case EventType.Callback:
                         triggers = Plugins
-                            .Where(s => s.Key.OnCallback == true && s.Key.Callbacks.Contains(command));
+                            .Where(s => s.Key.Callbacks.Contains(command));
                         break;
                     case EventType.Message:
                         triggers = Plugins
-                            .Where(s => s.Key.OnCommand == true && s.Key.Commands.Contains(command));
+                            .Where(s => s.Key.Commands.Contains(command));
                         break;
                 }
             }
@@ -81,7 +82,7 @@ namespace Ollio.Server.Helpers
                 {
                     IPlugin plugin = trigger.Value; // NOTE: For readability
                     //bool isValidPlugin = connection.Plugins.Contains(plugin.Id);
-                    bool isValidPlugin = true; // TODO: Do this before doing the above?
+                    bool isValidPlugin = true;
 
                     if (isValidPlugin)
                     {
@@ -92,7 +93,14 @@ namespace Ollio.Server.Helpers
                             Message = message
                         };
 
-                        PluginResponse response = plugin.OnMessage(castedRequest);
+                        PluginResponse response = null;
+
+                        switch(context.EventType) {
+                            case EventType.Message:
+                                plugin.OnMessage(castedRequest);
+                                break;
+                        }
+
                         responses.Add(response);
                     }
                 }
@@ -149,7 +157,7 @@ namespace Ollio.Server.Helpers
 
         static string GetPluginPath(string pluginName)
         {
-            string file;
+            string file = "";
 
             if (
                 Directory.GetFiles(
@@ -160,8 +168,10 @@ namespace Ollio.Server.Helpers
             {
                 string projectPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
                 string platform = RuntimeUtilities.GetTargetFrameworkForProject(Path.Combine(projectPath, $"{pluginName}.csproj"));
-                RuntimeUtilities.BuildProject(projectPath);
-                file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
+                bool built = NoCompile ? RuntimeUtilities.Compile(projectPath) : true;
+                
+                if(built)
+                    file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
             }
             else
             {

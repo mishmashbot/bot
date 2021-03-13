@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Figgle;
 using Microsoft.DotNet.PlatformAbstractions;
+using Ollio.Models;
 
 namespace Ollio.Utilities
 {
@@ -41,16 +42,17 @@ namespace Ollio.Utilities
             PrintStatusMessage(message, "Warning", prefix, caller, ConsoleColor.Yellow);
         }
 
-        public static void PrintStartupMessage()
+        public static void PrintStartupMessage(RuntimeInfo runtime)
         {
             string logo = FiggleFonts.Standard.Render("Ollio").TrimEnd();
             string[] logoSplit = logo.Split('\n');
 
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine(logo);
-            Console.ForegroundColor = ConsoleColor.Gray;
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(new string('=', (logoSplit[logoSplit.Length - 2].Length + 1)));
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine($" Version ??? on {runtime.Platform}");
             ResetForegroundColor();
         }
 

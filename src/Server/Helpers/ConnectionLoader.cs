@@ -43,9 +43,11 @@ namespace Ollio.Server.Helpers
                 {
                     Name = connection.Name
                 };
-                
+
                 connection.Thread.Start(); // TODO: Handle thread failure
-                ConsoleUtilities.PrintSuccessMessage($"{connection.Name}: Connected to Telegram (#{connection.Thread.ManagedThreadId})");
+                var me = connection.Client.GetMeAsync().Result;
+
+                ConsoleUtilities.PrintSuccessMessage($"{connection.Name}: Connected as @{me.Username} ({me.Id})");
             }
             else
             {
