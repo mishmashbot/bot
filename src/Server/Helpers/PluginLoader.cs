@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Telegram.Bot;
 using Ollio.Models;
-using Ollio.Models.Requests;
-using Ollio.Models.Responses;
+using Ollio.Plugin;
+using Ollio.Types;
 using Ollio.Utilities;
 
 namespace Ollio.Server.Helpers
@@ -16,107 +15,178 @@ namespace Ollio.Server.Helpers
     //       PowerShell plugins?
     public static class PluginLoader
     {
-        public static IDictionary<string, string> Commands { get; set; }
-        public static IEnumerable<PluginBase> Plugins { get; set; }
+        public static Dictionary<PluginSubscription, IPlugin> Plugins { get; set; }
 
-        public static PluginBase GetPluginById(string pluginId)
+        public static List<PluginResponse> Invoke(Message message, Context context, Connection connection)
         {
-            var foundPlugins = Plugins.Where(p => p.Id == pluginId);
-            var foundPluginsAmount = foundPlugins.Count();
+            string command = "";
+            bool isCommand = false;
+            List<PluginResponse> responses = new List<PluginResponse>();
+            IEnumerable<KeyValuePair<PluginSubscription, IPlugin>> triggers = null;
+            var type = message.Type;
 
-            if(foundPluginsAmount > 1) {
-                ConsoleUtilities.PrintWarningMessage($"Found more than one plugin with the ID '{pluginId}'");
-            } else if(foundPluginsAmount == 0) {
-                ConsoleUtilities.PrintWarningMessage($"Unable to find a plugin with the ID '{pluginId}'");
+            if (
+                message.Type == Message.MessageType.Text &&
+                (
+                    (context.EventType == EventType.Message && message.Text.StartsWith("/")) ||
+                    context.EventType == EventType.Callback
+                )
+            )
+            {
+                isCommand = true;
+                command = "ollio1";
             }
 
-            return foundPlugins.FirstOrDefault();
-        }
+            if (isCommand)
+            {
+                message.Text = message.Text.Replace(command, "").Trim();
 
-        public static PluginResponse HandleRequest(PluginRequest request)
-        {
-            PluginResponse response = null;
-            string pluginId;
-            
-            if(Commands.TryGetValue(request.RawInput, out pluginId)) {
-                PluginBase plugin = GetPluginById(pluginId);
-                response = plugin.Invoke(request);
+                switch(context.EventType)
+                {
+                    case EventType.Callback:
+                        triggers = Plugins
+                            .Where(s => s.Key.OnCallback == true && s.Key.Callbacks.Contains(command));
+                        break;
+                    case EventType.Message:
+                        triggers = Plugins
+                            .Where(s => s.Key.OnCommand == true && s.Key.Commands.Contains(command));
+                        break;
+                }
+            }
+            else
+            {
+                switch (type)
+                {
+                    case Message.MessageType.Audio:
+                        triggers = Plugins.Where(s => s.Key.OnAudio == true);
+                        break;
+                    case Message.MessageType.Document:
+                        triggers = Plugins.Where(s => s.Key.OnDocument == true);
+                        break;
+                    case Message.MessageType.Photo:
+                        triggers = Plugins.Where(s => s.Key.OnPhoto == true);
+                        break;
+                    case Message.MessageType.Sticker:
+                        triggers = Plugins.Where(s => s.Key.OnSticker == true);
+                        break;
+                    case Message.MessageType.Text:
+                        triggers = Plugins.Where(s => s.Key.OnText == true);
+                        break;
+                }
             }
 
-            return response;
-        }
+            if (triggers != null)
+            {
+                foreach (var trigger in triggers)
+                {
+                    IPlugin plugin = trigger.Value; // NOTE: For readability
+                    //bool isValidPlugin = connection.Plugins.Contains(plugin.Id);
+                    bool isValidPlugin = true; // TODO: Do this before doing the above?
 
-        public static void StartupPlugin(string pluginId, dynamic Connection)
-        {
-            PluginBase plugin = GetPluginById(pluginId);
+                    if (isValidPlugin)
+                    {
+                        Request castedRequest = new Request
+                        {
+                            Command = command,
+                            Runtime = Program.RuntimeInfo,
+                            Message = message
+                        };
 
-            if(plugin != null) {
-                plugin.Startup();
-                plugin.Startup(Connection);
-                // TODO: Is there some nice way we can not fire unneeded ones?
-                //       Is there a performance hit from doing this?
-                //plugin.Startup(Client.DiscordContext);
-                //plugin.Startup(Client.IRCContext);
-                //plugin.Startup(Client.TelegramContext);
-            } else {
-                ConsoleUtilities.PrintWarningMessage($"Unable to start '{pluginId}' as it was not found");
+                        PluginResponse response = plugin.OnMessage(castedRequest);
+                        responses.Add(response);
+                    }
+                }
             }
+
+            return responses;
         }
 
         public static int UpdatePlugins()
         {
-            string[] pluginPaths = GetPluginPaths().ToArray();
+            Plugins = new Dictionary<PluginSubscription, IPlugin>();
 
-            Plugins = pluginPaths.SelectMany(pluginPath =>
+            string[] pluginPaths = CollectPlugins().ToArray();
+
+            var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
             {
                 Assembly pluginAssembly = LoadPlugin(pluginPath);
-                return CreateCommands(pluginAssembly);
+                return CreatePlugin(pluginAssembly);
             }).ToList();
 
-            return Plugins.Count();
-        }
-
-        public static int UpdatePluginCommands()
-        {
-            Commands = new Dictionary<string, string>();
-
-            foreach(var plugin in Plugins)
+            foreach (var plugin in loadedPlugins)
             {
-                foreach(var command in plugin.Commands) {
-                    Commands.Add(command, plugin.Id);
+                if (plugin.Subscription != null)
+                {
+                    Plugins.Add(plugin.Subscription, plugin);
                 }
             }
 
-            return Commands.Count();
+            int count = Plugins.Count();
+
+            if(count > 0)
+                ConsoleUtilities.PrintSuccessMessage($"Loaded {count} plugins");
+
+            return count;
         }
 
-        static string CreatePluginPath(string pluginName)
+        static List<string> CollectPlugins()
         {
-#if DEBUG
-            return Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName, "bin", "Debug", "net5", $"{pluginName}.dll"); // TODO: Automate the "bin/Debug/net5/ path somehow?
-#else
-            return Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName, $"{pluginName}.dll");
-#endif
-        }
+            var pluginPaths = new List<string>();
 
-        static List<string> GetPluginPaths()
-        {
-            List<string> pluginPaths = new List<string>();
-
-            var pluginNames = Directory
+            IEnumerable<string> plugins = Directory
                 .GetDirectories(RuntimeUtilities.GetPluginsRoot())
                 .Select(d => Path.GetFileName(d));
 
-            foreach(string pluginName in pluginNames)
+            foreach (var plugin in plugins)
             {
-                string pluginPath = CreatePluginPath(pluginName);
-                if(File.Exists(pluginPath))
-                {
+                string pluginPath = GetPluginPath(plugin);
+                if (!String.IsNullOrEmpty(pluginPath))
                     pluginPaths.Add(pluginPath);
-                }
             }
 
             return pluginPaths;
+        }
+
+        static string GetPluginPath(string pluginName)
+        {
+            string file;
+
+            if (
+                Directory.GetFiles(
+                    Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName),
+                    "*.csproj"
+                ).Length > 0
+            )
+            {
+                string projectPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
+                string platform = RuntimeUtilities.GetTargetFrameworkForProject(Path.Combine(projectPath, $"{pluginName}.csproj"));
+                RuntimeUtilities.BuildProject(projectPath);
+                file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
+            }
+            else
+            {
+                file = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName, $"{pluginName}.dll");
+            }
+
+            if (File.Exists(file))
+                return file;
+            else
+                return null;
+        }
+
+        static IEnumerable<IPlugin> CreatePlugin(Assembly assembly)
+        {
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (typeof(IPlugin).IsAssignableFrom(type))
+                {
+                    IPlugin result = Activator.CreateInstance(type) as IPlugin;
+                    if (result != null)
+                    {
+                        yield return result;
+                    }
+                }
+            }
         }
 
         static Assembly LoadPlugin(string fullPath)
@@ -125,27 +195,6 @@ namespace Ollio.Server.Helpers
             ConsoleUtilities.PrintDebugMessage($"Loading plugin: {pluginLocation}");
             PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
             return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
-        }
-
-        static IEnumerable<PluginBase> CreateCommands(Assembly assembly)
-        {
-            int count = 0;
-
-            foreach (Type type in assembly.GetTypes())
-            {
-                if (typeof(PluginBase).IsAssignableFrom(type))
-                {
-                    PluginBase result = Activator.CreateInstance(type) as PluginBase;
-                    if (result != null)
-                    {
-                        count++;
-                        yield return result;
-                    }
-                }
-            }
-
-            if (count == 0)
-                ConsoleUtilities.PrintWarningMessage($"{assembly.GetName().Name} ({assembly.GetName().Version}) has no commands to load");
         }
     }
 }

@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Server/bin/Debug/net5.0/Ollio.Server.dll",
+            "program": "${workspaceFolder}/src/Server/bin/Debug/net6.0.0/Ollio.Server.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Server",
             "console": "internalConsole",

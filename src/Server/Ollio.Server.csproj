@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Common\Ollio.csproj" />
     <ProjectReference Include="..\Config\Ollio.Config.csproj" />
+    <ProjectReference Include="..\Plugin\Ollio.Plugin.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -11,7 +12,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0.0</TargetFramework>
   </PropertyGroup>
 
 </Project>

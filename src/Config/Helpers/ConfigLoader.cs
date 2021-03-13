@@ -9,6 +9,7 @@ namespace Ollio.Config.Helpers
 {
     public class ConfigLoader
     {
+        // TODO: Error on non-unique IDs
         public static void UpdateConfig(string[] arguments = null)
         {
             StringReader input;

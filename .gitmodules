@@ -1,3 +1,0 @@
-[submodule "src/Plugins/HelloWorldPlugin"]
-	path = src/Plugins/HelloWorldPlugin
-	url = git@github.com:olliobot/plugin-helloworld.git
