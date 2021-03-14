@@ -1,6 +1,6 @@
 using System;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     public class RuntimeInfo
     {
@@ -10,5 +10,7 @@ namespace Ollio.Models
         public string Platform { get; set; }
         public string PlatformVersion { get; set; }
         public DateTime TimeStarted { get; set; }
+        public Version Version { get; set; }
+        public string VersionCommit { get; set; }
     }
 }

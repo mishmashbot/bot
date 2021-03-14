@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace Ollio.Server.Helpers
+namespace Ollio.Helpers
 {
     class PluginLoadContext : AssemblyLoadContext
     {

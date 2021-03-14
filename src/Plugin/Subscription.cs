@@ -1,5 +1,5 @@
 
 namespace Ollio.Plugin
 {
-    public class Subscription : Ollio.Models.PluginSubscription { }
+    public class Subscription : Ollio.Common.Models.PluginSubscription { }
 }

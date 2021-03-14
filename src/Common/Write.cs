@@ -1,22 +1,19 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Figgle;
-using Microsoft.DotNet.PlatformAbstractions;
-using Ollio.Models;
 
-namespace Ollio.Utilities
+namespace Ollio.Common
 {
-    public class ConsoleUtilities
+    public class Write
     {
-        public static void PrintDebugMessage(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Debug(string message, string prefix = null, [CallerMemberName] string caller = null)
         {
 #if DEBUG
             PrintStatusMessage(message, "Debug", prefix, caller, ConsoleColor.Magenta, ConsoleColor.DarkGray);
 #endif
         }
 
-        public static void PrintErrorMessage(Exception exception, [CallerMemberName] string caller = null)
+        public static void Error(Exception exception, [CallerMemberName] string caller = null)
         {
 
 #if DEBUG
@@ -27,51 +24,24 @@ namespace Ollio.Utilities
             PrintStatusMessage(message, "Oops", null, caller, ConsoleColor.Red, ConsoleColor.White);
         }
 
-        public static void PrintInfoMessage(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Info(string message, string prefix = null, [CallerMemberName] string caller = null)
         {
             PrintStatusMessage(message, "Info", prefix, caller, ConsoleColor.Blue);
         }
 
-        public static void PrintSuccessMessage(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Success(string message, string prefix = null, [CallerMemberName] string caller = null)
         {
             PrintStatusMessage(message, "Success", prefix, caller, ConsoleColor.Green);
         }
 
-        public static void PrintWarningMessage(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Warning(string message, string prefix = null, [CallerMemberName] string caller = null)
         {
             PrintStatusMessage(message, "Warning", prefix, caller, ConsoleColor.Yellow);
         }
 
-        public static void PrintStartupMessage(RuntimeInfo runtime)
+        public static void Reset()
         {
-            string logo = FiggleFonts.Standard.Render("Ollio").TrimEnd();
-            string[] logoSplit = logo.Split('\n');
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(logo);
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine(new string('=', (logoSplit[logoSplit.Length - 2].Length + 1)));
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.WriteLine($" Version ??? on {runtime.Platform}");
-            ResetForegroundColor();
-        }
-
-        static string RenderEmoji(string emoji)
-        {
-            switch (RuntimeEnvironment.OperatingSystemPlatform)
-            {
-                case Platform.Windows:
-                    return $"{emoji}";
-                default:
-                    if (emoji.Length == 1)
-                    {
-                        return $"{emoji}";
-                    }
-                    else
-                    {
-                        return $"{emoji} ";
-                    }
-            }
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         static void PrintStatusMessage(
@@ -122,13 +92,8 @@ namespace Ollio.Utilities
                     }
                 }
 
-                ResetForegroundColor();
+                Reset();
             }
-        }
-
-        static void ResetForegroundColor()
-        {
-            Console.ForegroundColor = ConsoleColor.White;
         }
     }
 }

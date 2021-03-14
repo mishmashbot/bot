@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using HtmlAgilityPack;
 using Telegram.Bot.Args;
-using Ollio.Models;
+using Ollio.Common;
+using Ollio.Common.Models;
+using Ollio.Common.Types;
 using Ollio.Utilities;
 using TelegramBotEnums = Telegram.Bot.Types.Enums;
 
@@ -12,26 +13,48 @@ namespace Ollio.Helpers
 {
     public class TelegramHelpers
     {
-        public async Task HandleUpdate(MessageEventArgs messageEvent, Connection connection)
+        public static async Task HandleMessage(
+            object sender, MessageEventArgs messageEvent,
+            Connection connection
+        )
         {
+            try
+            {
+                Context context = GetContext(connection, EventType.Message);
+                Message message = ParseMessageEvent(messageEvent);
+                
+                List<PluginResponse> responses = PluginLoader.Invoke(message, context, connection);
 
+                if (responses != null)
+                {
+                    foreach (var response in responses)
+                    {
+                        await connection.Client.SendTextMessageAsync(
+                            -1001127490424,
+                            response.Message.Text
+                        );
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Write.Error(e);
+            }
         }
 
-        public async Task<Message> HandleMessage(MessageEventArgs messageEvent, Connection connection)
+        static Context GetContext(Connection connection, EventType eventType)
         {
-            Message message = ParseMessageEvent(messageEvent);
+            Context context = new Context();
 
-            return message;
+            context.EventType = eventType;
+
+            return context;
         }
 
-        public async Task HandleMessageEdited(MessageEventArgs messageEvent, Connection connection)
-        {
-
-        }
-
-        Message ParseMessageEvent(MessageEventArgs messageEvent)
+        static Message ParseMessageEvent(MessageEventArgs messageEvent)
         {
             Message message = new Message();
+
             var payload = messageEvent.Message;
             TelegramBotEnums.MessageType type = messageEvent.Message.Type;
 
@@ -80,7 +103,7 @@ namespace Ollio.Helpers
                         payload.Caption
                     );
                     break;
-                
+
                 /*case TelegramBotEnums.MessageType.Poll:
                     break;*/
 
@@ -109,32 +132,14 @@ namespace Ollio.Helpers
                     );
                     break;
 
-                /*case TelegramBotEnums.MessageType.VideoNote
-                    break;*/
-            
-                /*case TelegramBotEnums.MessageType.Voice:
-                    break;*/
+                    /*case TelegramBotEnums.MessageType.VideoNote
+                        break;*/
+
+                    /*case TelegramBotEnums.MessageType.Voice:
+                        break;*/
             }
 
             return message;
         }
-
-        /*FileStream fileStream = File.Open("/tmp/perfect.mp4", FileMode.Open);
-        Stream stream = fileStream;
-        MessageFile file = new MessageFile(stream);
-        var message = new Message();
-        message.CreateVideo(file);
-        //message.CreateText("it werks");
-        ConsoleUtilities.PrintDebugMessage(message.Text);
-        await connection.Client.SendVideoAsync(
-            //-1001127490424,
-            -1001105619215,
-            message.File
-        );
-        fileStream.Close();*/
-        /*await connection.Client.SendTextMessageAsync(
-            -1001127490424,
-            message.Text
-        );*/
     }
 }

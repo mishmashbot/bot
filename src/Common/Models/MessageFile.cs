@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     public class MessageFile : Telegram.Bot.Types.InputFiles.InputOnlineFile
     {

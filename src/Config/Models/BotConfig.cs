@@ -1,7 +1,7 @@
 
 namespace Ollio.Config.Models
 {
-    public class ContextConfig
+    public class BotConfig
     {
         public string Prefix { get; set; } = "/";
         public string Server { get; set; } = "";

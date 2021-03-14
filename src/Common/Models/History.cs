@@ -1,6 +1,6 @@
 using System;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     public class History
     {

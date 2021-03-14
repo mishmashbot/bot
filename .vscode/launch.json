@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": ".NET Core Launch (Server)",
+            "name": ".NET Core Launch (App)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/src/Server/bin/Debug/net6.0/Ollio.Server.dll",
+            "program": "${workspaceFolder}/src/App/bin/Debug/net6.0/Ollio.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/src/Server",
+            "cwd": "${workspaceFolder}/src/App",
             "console": "internalConsole",
             "stopAtEntry": false
         },

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     // TODO: Buttons
     //       Thumbs

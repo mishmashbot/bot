@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Xml;
+using Ollio.Common;
 
 namespace Ollio.Utilities
 {
@@ -41,13 +42,13 @@ namespace Ollio.Utilities
                     };
 
                     process.Start();
-                    ConsoleUtilities.PrintInfoMessage($"Comping project: {project}");
+                    Write.Info($"Comping project: {project}");
                     string result = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
 
                     if (result.Contains("Build FAILED."))
                     {
-                        ConsoleUtilities.PrintWarningMessage(@$"Compilation failed ({project})
+                        Write.Warning(@$"Compilation failed ({project})
 {result}");
                     } else {
                         built = true;
@@ -56,7 +57,7 @@ namespace Ollio.Utilities
                 catch (Win32Exception)
                 {
                     IsCompilingAvailable = false;
-                    ConsoleUtilities.PrintWarningMessage(".NET SDK is unavailable. Compilation is disabled.");
+                    Write.Warning(".NET SDK is unavailable. Compilation has been disabled.");
                 }
             }
 
@@ -81,7 +82,10 @@ namespace Ollio.Utilities
 
         public static string GetRootDirectory()
         {
-            var binaryLocation = Process.GetCurrentProcess().MainModule.FileName;
+            var binaryLocation = Assembly.GetExecutingAssembly().Location;
+            if(binaryLocation == null)
+                binaryLocation = Process.GetCurrentProcess().MainModule.FileName;
+
 #if DEBUG
             return Path.GetFullPath(Path.Combine(
                 Path.GetDirectoryName(

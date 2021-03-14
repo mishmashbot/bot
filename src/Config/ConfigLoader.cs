@@ -2,20 +2,24 @@ using System.IO;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Ollio.Config.Models;
-using Ollio.Utilities;
 
 namespace Ollio.Config
 {
     public class ConfigLoader
     {
+        const string DefaultConfig = @"";
+
         // TODO: Error on non-unique IDs
-        public static void UpdateConfig(string[] arguments = null)
+        public static bool UpdateConfig(string path)
         {
             StringReader input;
 
-            using (var reader = new StreamReader(
-                Path.Combine(RuntimeUtilities.GetConfigRoot(), "config.yaml")
-            )) {
+            if(!File.Exists(path)) {
+                // TODO: Create default config
+                return false;
+            }
+
+            using (var reader = new StreamReader(path)) {
                 input = new StringReader(reader.ReadToEnd());
             }
 
@@ -25,8 +29,8 @@ namespace Ollio.Config
 
             var config = deserializer.Deserialize<Root>(input);
             ConfigState.Current = config;
-        }
 
-        const string DefaultConfig = @"";
+            return true;
+        }
     }
 }

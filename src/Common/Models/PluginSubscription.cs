@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     public class PluginSubscription
     {
-        public List<string> Callbacks { get; set; } = new List<string>();
         public List<string> Commands { get; set; } = new List<string>();
         public bool OnAudio { get; set; }
         public bool OnDocument { get; set; }

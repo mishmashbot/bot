@@ -3,75 +3,88 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Ollio.Models;
-using Ollio.Plugin;
-using Ollio.Types;
+using System.Text.RegularExpressions;
+using Ollio.Common;
+using Ollio.Common.Models;
+using Ollio.Common.Types;
 using Ollio.Utilities;
+using PluginEntities = Ollio.Plugin;
 
-namespace Ollio.Server.Helpers
+namespace Ollio.Helpers
 {
-    // TODO: WASM plugins?
-    //       Lua plugins?
-    //       PowerShell plugins?
     public static class PluginLoader
     {
         public static bool NoCompile { get; set; }
-        public static Dictionary<PluginSubscription, IPlugin> Plugins { get; set; }
+        public static Dictionary<PluginSubscription, PluginEntities.IPlugin> Plugins { get; set; }
 
         public static List<PluginResponse> Invoke(Message message, Context context, Connection connection)
         {
-            string command = "";
+            Command command = null;
             bool isCommand = false;
             List<PluginResponse> responses = new List<PluginResponse>();
-            IEnumerable<KeyValuePair<PluginSubscription, IPlugin>> triggers = null;
+            IEnumerable<KeyValuePair<PluginSubscription, PluginEntities.IPlugin>> triggers = null;
             var type = message.Type;
 
             if (
                 message.Type == Message.MessageType.Text &&
+                message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
                 (
-                    (context.EventType == EventType.Message && message.Text.StartsWith("/")) ||
+                    (context.EventType == EventType.Message && message.Text.StartsWith(connection.Prefix)) ||
                     context.EventType == EventType.Callback
                 )
             )
             {
-                isCommand = true;
-                command = "info";
-            }
-
-            if (isCommand)
-            {
-                message.Text = message.Text.Replace(command, "").Trim();
+                Regex commandRegex = null;
+                Match commandMatch = null;
 
                 switch(context.EventType)
                 {
-                    case EventType.Callback:
-                        triggers = Plugins
-                            .Where(s => s.Key.Callbacks.Contains(command));
-                        break;
+                    /*case EventType.Callback:
+                        commandRegex = new Regex("");
+                        break;*/
                     case EventType.Message:
-                        triggers = Plugins
-                            .Where(s => s.Key.Commands.Contains(command));
+                        commandRegex = new Regex(@$"^\/(?<cmd>\w*)(?:$|@{connection.Me.Username.ToLower()}$)");
                         break;
                 }
+
+                commandMatch = commandRegex.Match(message.Text);
+                if(commandMatch.Success)
+                {
+                    command = new Command
+                    {
+                        /*Arguments =,*/
+                        Directive = commandMatch.Groups["cmd"].Value.ToLower()
+                    };
+
+                    Write.Debug(command.Directive);
+
+                    message.Text = message.Text.Replace(command.Directive, "").Trim();
+                    triggers = Plugins
+                        .Where(p => p.Key.Commands.Contains(command.Directive));
+
+                    if(triggers != null)
+                        isCommand = true;
+                }
             }
-            else
+
+            if(!isCommand)
             {
                 switch (type)
                 {
                     case Message.MessageType.Audio:
-                        triggers = Plugins.Where(s => s.Key.OnAudio == true);
+                        triggers = Plugins.Where(p => p.Key.OnAudio == true);
                         break;
                     case Message.MessageType.Document:
-                        triggers = Plugins.Where(s => s.Key.OnDocument == true);
+                        triggers = Plugins.Where(p => p.Key.OnDocument == true);
                         break;
                     case Message.MessageType.Photo:
-                        triggers = Plugins.Where(s => s.Key.OnPhoto == true);
+                        triggers = Plugins.Where(p => p.Key.OnPhoto == true);
                         break;
                     case Message.MessageType.Sticker:
-                        triggers = Plugins.Where(s => s.Key.OnSticker == true);
+                        triggers = Plugins.Where(p => p.Key.OnSticker == true);
                         break;
                     case Message.MessageType.Text:
-                        triggers = Plugins.Where(s => s.Key.OnText == true);
+                        triggers = Plugins.Where(p => p.Key.OnText == true);
                         break;
                 }
             }
@@ -80,13 +93,12 @@ namespace Ollio.Server.Helpers
             {
                 foreach (var trigger in triggers)
                 {
-                    IPlugin plugin = trigger.Value; // NOTE: For readability
-                    //bool isValidPlugin = connection.Plugins.Contains(plugin.Id);
-                    bool isValidPlugin = true;
+                    PluginEntities.IPlugin plugin = trigger.Value; // NOTE: For readability
+                    bool isValidPlugin = connection.Plugins.Contains(plugin.Id);
 
                     if (isValidPlugin)
                     {
-                        Request castedRequest = new Request
+                        PluginEntities.Request castedRequest = new PluginEntities.Request
                         {
                             Command = command,
                             Runtime = Program.RuntimeInfo,
@@ -97,7 +109,7 @@ namespace Ollio.Server.Helpers
 
                         switch(context.EventType) {
                             case EventType.Message:
-                                plugin.OnMessage(castedRequest);
+                                response = plugin.OnMessage(castedRequest);
                                 break;
                         }
 
@@ -109,9 +121,10 @@ namespace Ollio.Server.Helpers
             return responses;
         }
 
+        // TODO: Not load in plugins we don't need!
         public static int UpdatePlugins()
         {
-            Plugins = new Dictionary<PluginSubscription, IPlugin>();
+            Plugins = new Dictionary<PluginSubscription, PluginEntities.IPlugin>();
 
             string[] pluginPaths = CollectPlugins().ToArray();
 
@@ -132,7 +145,7 @@ namespace Ollio.Server.Helpers
             int count = Plugins.Count();
 
             if(count > 0)
-                ConsoleUtilities.PrintSuccessMessage($"Loaded {count} plugins");
+                Write.Success($"Loaded {count} plugins");
 
             return count;
         }
@@ -168,8 +181,9 @@ namespace Ollio.Server.Helpers
             {
                 string projectPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
                 string platform = RuntimeUtilities.GetTargetFrameworkForProject(Path.Combine(projectPath, $"{pluginName}.csproj"));
-                bool built = NoCompile ? RuntimeUtilities.Compile(projectPath) : true;
-                
+                //bool built = NoCompile ? RuntimeUtilities.Compile(projectPath) : true;
+                bool built = RuntimeUtilities.Compile(projectPath);
+
                 if(built)
                     file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
             }
@@ -184,13 +198,13 @@ namespace Ollio.Server.Helpers
                 return null;
         }
 
-        static IEnumerable<IPlugin> CreatePlugin(Assembly assembly)
+        static IEnumerable<PluginEntities.IPlugin> CreatePlugin(Assembly assembly)
         {
             foreach (Type type in assembly.GetTypes())
             {
-                if (typeof(IPlugin).IsAssignableFrom(type))
+                if (typeof(PluginEntities.IPlugin).IsAssignableFrom(type))
                 {
-                    IPlugin result = Activator.CreateInstance(type) as IPlugin;
+                    PluginEntities.IPlugin result = Activator.CreateInstance(type) as PluginEntities.IPlugin;
                     if (result != null)
                     {
                         yield return result;
@@ -202,7 +216,7 @@ namespace Ollio.Server.Helpers
         static Assembly LoadPlugin(string fullPath)
         {
             string pluginLocation = Path.GetFullPath(fullPath);
-            ConsoleUtilities.PrintDebugMessage($"Loading plugin: {pluginLocation}");
+            Write.Debug($"Loading plugin: {pluginLocation}");
             PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
             return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
         }

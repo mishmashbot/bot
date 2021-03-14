@@ -1,6 +1,6 @@
-using Ollio.Types;
+using Ollio.Common.Types;
 
-namespace Ollio.Models
+namespace Ollio.Common.Models
 {
     public class Context
     {
