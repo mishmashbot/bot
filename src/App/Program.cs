@@ -35,7 +35,7 @@ namespace Ollio
         static async Task Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            SetRuntimeInfo();
+            await SetRuntimeInfo();
 
             await Parser.Default.ParseArguments<Arguments>(args)
                 .WithParsedAsync(Run);
@@ -100,16 +100,12 @@ namespace Ollio
             var v = runtime.AppVersion;
 
             var joke = "";
-            var version = $"{v.Major}.{v.Minor}.{v.Build}";
-
-            if(runtime.AppCommit != null)
-                version += $"+{runtime.AppCommit}";
+            var version = runtime.GetVersion(includeBuild: true, includeCommit: true, includeRelease: true);
 
             if(printJoke)
             {
                 try {
-                    var dadJokeClient = new Ollio.Clients.ICanHazDadJoke();
-                    var dadJoke = await dadJokeClient.Get();
+                    var dadJoke = await new Ollio.Clients.ICanHazDadJoke().Get();
                     joke = dadJoke.Joke.Replace(System.Environment.NewLine, " ");
                 } catch(Exception) {
                     printJoke = false;
@@ -138,11 +134,12 @@ namespace Ollio
             Write.Reset();
         }
 
-        static void SetRuntimeInfo()
+        static async Task SetRuntimeInfo()
         {
             RuntimeInfo = new RuntimeInfo();
 
             var informalVersionAttribute = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            var wtfIsMyIp = await new Ollio.Clients.WtfIsMyIp().Get();
 
             var commit = "";
             if(informalVersionAttribute?.InformationalVersion != null)
@@ -160,6 +157,7 @@ namespace Ollio
             RuntimeInfo.AppCommit = commit;
             RuntimeInfo.AppVersion = Assembly.GetExecutingAssembly().GetName().Version;
             RuntimeInfo.Hostname = System.Net.Dns.GetHostName();
+            RuntimeInfo.IPAddress = wtfIsMyIp.IPAddress;
             RuntimeInfo.OS = os;
             RuntimeInfo.OSVersion = RuntimeEnvironment.OperatingSystemVersion;
             RuntimeInfo.Platform = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
