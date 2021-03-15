@@ -15,7 +15,7 @@ namespace Ollio.Helpers
 {
     public class ConnectionLoader
     {
-        public static void CreateConnection(ConfigModels.Bot bot)
+        public static bool CreateConnection(ConfigModels.Bot bot)
         {
             var connection = new Connection
             {
@@ -25,10 +25,10 @@ namespace Ollio.Helpers
                 Token = bot.Config.Token
             };
 
-            CreateConnection(connection);
+            return CreateConnection(connection);
         }
 
-        public static void CreateConnection(Connection connection)
+        public static bool CreateConnection(Connection connection)
         {
             if (String.IsNullOrEmpty(connection.Name))
             {
@@ -56,6 +56,7 @@ namespace Ollio.Helpers
                     };
 
                     Write.Success($"{connection.Name}: Connected as @{connection.Me.Username} ({connection.Me.Id})");
+                    return true;
                 }
                 catch (ThreadStartException e)
                 {
@@ -66,14 +67,23 @@ namespace Ollio.Helpers
             {
                 Write.Warning($"{connection.Name}: Unable to connect to Telegram");
             }
+
+            return false;
         }
 
-        public static void CreateConnections(List<ConfigModels.Bot> bots)
+        public static int CreateConnections(List<ConfigModels.Bot> bots)
         {
+            int count = 0;
+
             foreach (var bot in bots)
             {
-                CreateConnection(bot);
+                var success = CreateConnection(bot);
+
+                if(success)
+                    count++;
             }
+
+            return count;
         }
 
         static async Task StartConnection(Connection connection)
@@ -82,15 +92,8 @@ namespace Ollio.Helpers
             {
                 connection.Client.OnMessage += async (sender, e) =>
                     await TelegramHelpers.HandleMessage(sender, e, connection);
-
-                //connection.Client.OnMessageEdited += async (sender, e) => { await _telegramHelpers.HandleMessageEdited(e, connection); };
-                /*connection.Client.OnMessage += async (sender, e) => {
-                    ConsoleUtilities.PrintDebugMessage("Got message!");
-                    await connection.Client.SendTextMessageAsync(
-                        -1001127490424,
-                        $"You said {e.Message.Text}. This is from thread {connection.Thread.ManagedThreadId}."
-                    );
-                };*/
+                //connection.Client.OnMessageEdited += async (sender, e) =>
+                //    await TelegramHelpers.HandleMessageEdit(sender, e, connection);
 
                 connection.Client.StartReceiving();
             }

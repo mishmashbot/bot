@@ -6,10 +6,10 @@ namespace Ollio.Common
 {
     public class Write
     {
-        public static void Debug(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Debug(string message, [CallerMemberName] string caller = null)
         {
 #if DEBUG
-            PrintStatusMessage(message, "Debug", prefix, caller, ConsoleColor.Magenta, ConsoleColor.DarkGray);
+            Print(message, "Debug", caller, ConsoleColor.Magenta, ConsoleColor.DarkGray);
 #endif
         }
 
@@ -21,22 +21,22 @@ namespace Ollio.Common
 #else
             string message = $@"{exception.Message}";
 #endif
-            PrintStatusMessage(message, "Oops", null, caller, ConsoleColor.Red, ConsoleColor.White);
+            Print(message, "Oops", caller, ConsoleColor.Red, ConsoleColor.White);
         }
 
-        public static void Info(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Info(string message, [CallerMemberName] string caller = null)
         {
-            PrintStatusMessage(message, "Info", prefix, caller, ConsoleColor.Blue);
+            Print(message, "Info", caller, ConsoleColor.Blue);
         }
 
-        public static void Success(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Success(string message, [CallerMemberName] string caller = null)
         {
-            PrintStatusMessage(message, "Success", prefix, caller, ConsoleColor.Green);
+            Print(message, "Success", caller, ConsoleColor.Green);
         }
 
-        public static void Warning(string message, string prefix = null, [CallerMemberName] string caller = null)
+        public static void Warning(string message, [CallerMemberName] string caller = null)
         {
-            PrintStatusMessage(message, "Warning", prefix, caller, ConsoleColor.Yellow);
+            Print(message, "Warning", caller, ConsoleColor.Yellow);
         }
 
         public static void Reset()
@@ -44,10 +44,9 @@ namespace Ollio.Common
             Console.ForegroundColor = ConsoleColor.White;
         }
 
-        static void PrintStatusMessage(
+        static void Print(
             string message,
             string status = "",
-            string prefix = "",
             string caller = "",
             ConsoleColor prefixColor = ConsoleColor.White,
             ConsoleColor messageColor = ConsoleColor.Gray
@@ -66,12 +65,6 @@ namespace Ollio.Common
 
                 Console.ForegroundColor = prefixColor;
                 Console.Write(status);
-
-                if (!String.IsNullOrEmpty(prefix))
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.Write($"({prefix}) ");
-                }
 
                 Console.ForegroundColor = messageColor;
 

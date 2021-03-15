@@ -58,7 +58,7 @@ namespace Ollio
 
             try
             {
-                PrintStartupMessage(RuntimeInfo);
+                await PrintStartupMessage(RuntimeInfo, !arguments.NoJoke);
 
                 bool firstTimeLaunch = !(ConfigLoader.UpdateConfig(Path.Combine(RuntimeUtilities.GetConfigRoot(), "config.yaml")));
                 if (firstTimeLaunch)
@@ -69,13 +69,6 @@ namespace Ollio
                 //if(!arguments.NoCompile)
                 //    PluginLoader.NoCompile = true;
 
-                if (!arguments.NoJoke)
-                {
-                    var dadJokeClient = new Ollio.Clients.ICanHazDadJoke();
-                    var dadJoke = await dadJokeClient.Get();
-                    Write.Info(dadJoke.Joke);
-                }
-
                 var pluginsCount = PluginLoader.UpdatePlugins();
 
                 if (pluginsCount == 0)
@@ -84,7 +77,13 @@ namespace Ollio
                     Exit(ExitStatus.NoPluginsFound);
                 }
 
-                ConnectionLoader.CreateConnections(ConfigState.Current.Bots);
+                var connectionsCount = ConnectionLoader.CreateConnections(ConfigState.Current.Bots);
+
+                if (connectionsCount == 0)
+                {
+                    Write.Warning("No connections created.");
+                    Exit(ExitStatus.NoConnectionsCreated);
+                }
             }
             catch (Exception e)
             {
@@ -94,16 +93,28 @@ namespace Ollio
             QuitEvent.WaitOne();
         }
 
-        static void PrintStartupMessage(RuntimeInfo runtime)
+        static async Task PrintStartupMessage(RuntimeInfo runtime, bool printJoke = true)
         {
             string logo = FiggleFonts.Standard.Render("Ollio").TrimEnd();
             string[] logoSplit = logo.Split('\n');
+            var v = runtime.AppVersion;
 
-            var v = runtime.Version;
+            var joke = "";
             var version = $"{v.Major}.{v.Minor}.{v.Build}";
 
-            if(runtime.VersionCommit != null)
-                version += $"+{runtime.VersionCommit}";
+            if(runtime.AppCommit != null)
+                version += $"+{runtime.AppCommit}";
+
+            if(printJoke)
+            {
+                try {
+                    var dadJokeClient = new Ollio.Clients.ICanHazDadJoke();
+                    var dadJoke = await dadJokeClient.Get();
+                    joke = dadJoke.Joke.Replace(System.Environment.NewLine, " ");
+                } catch(Exception) {
+                    printJoke = false;
+                }
+            }
 
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(logo);
@@ -120,7 +131,9 @@ namespace Ollio
             Console.WriteLine(runtime.Platform);
             Console.ForegroundColor = ConsoleColor.Gray;
 
-            Console.WriteLine($" Copyright (C) 2021 ???");
+            if(printJoke)
+                Console.WriteLine($" {joke}");
+        
             Console.WriteLine("");
             Write.Reset();
         }
@@ -144,14 +157,14 @@ namespace Ollio
                 .Replace("elementary", "elementaryOS")
                 .Replace("ubuntu", "Ubuntu");
 
+            RuntimeInfo.AppCommit = commit;
+            RuntimeInfo.AppVersion = Assembly.GetExecutingAssembly().GetName().Version;
             RuntimeInfo.Hostname = System.Net.Dns.GetHostName();
             RuntimeInfo.OS = os;
             RuntimeInfo.OSVersion = RuntimeEnvironment.OperatingSystemVersion;
             RuntimeInfo.Platform = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
             RuntimeInfo.PlatformVersion = Environment.Version.ToString();
             RuntimeInfo.TimeStarted = DateTime.Now;
-            RuntimeInfo.Version = Assembly.GetExecutingAssembly().GetName().Version;
-            RuntimeInfo.VersionCommit = commit;
         }
     }
 }
