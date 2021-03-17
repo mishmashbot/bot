@@ -2,9 +2,9 @@
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Ollio.Clients.Models;
+using Ollio.Apis.Models;
 
-namespace Ollio.Clients.Http
+namespace Ollio.Apis.Http
 {
     public class JsonClient<T>
     {

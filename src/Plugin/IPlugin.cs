@@ -9,9 +9,13 @@ namespace Ollio.Plugin
         Subscription Subscription { get; }
         int Version { get; }
     
+        void OnInit() { }
+        void OnInit(Connection connection) { }
+        Task OnInitAsync() { return null; }
+        Task OnInitAsync(Connection connection) { return null; }
         Response OnMessage(Request request) { return null; }
         Task<Response> OnMessageAsync(Request request) { return null; }
-        void OnInit() { }
         Response OnTick(Request request) { return null; }
+        Task<Response> OnTickAsync(Request request) { return null; }
     }
 }

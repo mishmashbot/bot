@@ -1,5 +1,5 @@
 using System;
-using System.Diagnostics;
+using System.IO;
 
 namespace Ollio.Common.Models
 {
@@ -8,24 +8,81 @@ namespace Ollio.Common.Models
         public bool DisableNotification { get; set; }
         public bool DisableWebpagePreview { get; set; }
         public long ChatId { get; set; }
-        public Message.MessageType MessageType { get; set; } = Message.MessageType.Text;
+        public UploadFile File { get; set; }
         public int ReplyToMessageId { get; set; }
         public bool Silent { get; set; }
         public string Text { get; set; }
+        public Message.MessageType Type { get; set; } = Message.MessageType.Text;
 
-        public void CreateTextResponse(
-            string text,
+        public void CreatePhotoResponse(
+            UploadFile file,
+            string caption = "",
+            int replyToMessageId = 0,
             long chatId = 0,
             bool disableWebpagePreview = false,
-            bool disableNotification = false,
-            int replyToMessageId = 0
+            bool disableNotification = false
         )
         {
             ChatId = chatId;
             DisableNotification = disableNotification;
             DisableWebpagePreview = disableWebpagePreview;
-            MessageType = Message.MessageType.Text;
+            File = file;
             ReplyToMessageId = replyToMessageId;
+            Text = caption;
+            Type = Message.MessageType.Photo;
+        }
+
+        public void CreatePhotoResponse(
+            Stream fileStream,
+            string caption = "",
+            int replyToMessageId = 0,
+            long chatId = 0,
+            bool disableWebpagePreview = false,
+            bool disableNotification = false
+        )
+        {
+            CreatePhotoResponse(
+                fileStream,
+                caption,
+                replyToMessageId,
+                chatId,
+                disableWebpagePreview,
+                disableNotification
+            );
+        }
+
+        public void CreatePhotoResponse(
+            string url,
+            string caption = "",
+            int replyToMessageId = 0,
+            long chatId = 0,
+            bool disableWebpagePreview = false,
+            bool disableNotification = false
+        )
+        {
+            CreatePhotoResponse(
+                new UploadFile(new Uri(url)),
+                caption,
+                replyToMessageId,
+                chatId,
+                disableWebpagePreview,
+                disableNotification
+            );
+        }
+
+        public void CreateTextResponse(
+            string text,
+            int replyToMessageId = 0,
+            long chatId = 0,
+            bool disableWebpagePreview = false,
+            bool disableNotification = false
+        )
+        {
+            ChatId = chatId;
+            DisableNotification = disableNotification;
+            DisableWebpagePreview = disableWebpagePreview;
+            ReplyToMessageId = replyToMessageId;
+            Type = Message.MessageType.Text;
             Text = text;
         }
     }

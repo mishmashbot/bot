@@ -7,8 +7,9 @@ using Ollio.Common;
 using Ollio.Common.Models;
 using Ollio.State;
 using ConfigModels = Ollio.Common.Models.Config;
+using TelegramBotArgs = Telegram.Bot.Args;
+using TelegramBotEnums = Telegram.Bot.Types.Enums;
 using TelegramBotTypes = Telegram.Bot.Types;
-using System.Diagnostics;
 
 namespace Ollio.Helpers
 {
@@ -34,7 +35,8 @@ namespace Ollio.Helpers
             var context = new Context
             {
                 Config = bot.Config,
-                Owners = owners
+                Owners = owners,
+                Random = Program.Random
             };
 
             var connection = new Connection
@@ -69,17 +71,15 @@ namespace Ollio.Helpers
             bool hasStarted = false;
 
             connection.Client = new TelegramBotClient(connection.Token);
-            connection.Thread = new Thread(async () => await SetHandlers(connection))
-            {
-                Name = connection.Id
-            };
+            connection.Task = new Task(async () => await SetHandlers(connection));
 
-            var apiTestResult = await TestConnection(connection);
+            var apiTestResult = await TelegramHelpers.TestConnection(connection);
 
             if (apiTestResult)
             {
                 connection.Context.DateConnected = DateTime.Now;
                 connection.Context.Me = await connection.Client.GetMeAsync();
+                connection.Context.RuntimeInfo = Program.RuntimeInfo;
                 Write.Success($"{connection.Id}: Connected as @{connection.Context.Me.Username} ({connection.Context.Me.Id})");
                 hasConnected = true;
             }
@@ -92,8 +92,8 @@ namespace Ollio.Helpers
             {
                 try
                 {
-                    connection.Thread.Start();
-                    Write.Debug($"{connection.Id}: Started on thread #{connection.Thread.ManagedThreadId}");
+                    connection.Task.Start();
+                    Write.Debug($"{connection.Id}: Started as task #{connection.Task.Id}");
                     connection.Context.DateStarted = DateTime.Now;
                     hasStarted = true;
                 }
@@ -118,12 +118,13 @@ namespace Ollio.Helpers
 
                 if (!RuntimeState.DryRun)
                 {
-                    connection.Client.OnMessage += async (sender, e) =>
-                        await TelegramHandlers.HandleMessage(sender, e, connection);
-                    connection.Client.OnMessageEdited += async (sender, e) =>
-                        await TelegramHandlers.HandleMessageEdited(sender, e, connection);
+                    connection.Client.OnMessage += (sender, e) =>
+                        Respond(connection, e, (async () => await TelegramHandlers.HandleMessage(sender, e, connection)));
+                    //connection.Client.OnMessageEdited += async (sender, e) =>
+                    //    await TelegramHandlers.HandleMessageEdited(sender, e, connection);
 
                     connection.Client.StartReceiving();
+                    await PluginLoader.Init(connection);
                 }
             }
             catch (Exception e)
@@ -132,41 +133,23 @@ namespace Ollio.Helpers
             }
         }
 
-        static async Task<bool> TestConnection(Connection connection)
+        static void Respond(Connection connection, TelegramBotArgs.MessageEventArgs messageEvent, Func<Task> response)
         {
-            const int maxAttempts = 3;
-            int attempts = 0;
-            Stopwatch attemptStopwatch = new Stopwatch();
-            bool success = false;
+            // may god have mercy on my soul
+            Task waitTask = new Task(async () => {
+                Task respondTask = new Task(async () => await response());
+                
+                DateTime taskStartTime = DateTime.Now;
+                respondTask.Start();
 
-            // TODO: Allow user to Ctrl+C this
-            while(!success && attempts != maxAttempts)
-            {
-                string attemptMessage = $"{connection.Id}: Testing connectivity to Telegram";
-                if(attempts > 0)
-                    attemptMessage += $" (attempt {attempts+1})...";
-                else
-                    attemptMessage += "...";
-                Write.Debug(attemptMessage);
-
-                attemptStopwatch.Start();
-                bool result = await connection.Client.TestApiAsync();
-                attemptStopwatch.Stop();
-                attemptStopwatch.Reset();
-
-                if(result)
+                while (!respondTask.IsCompleted)
                 {
-                    success = true;
-                    break;
+                    if ((DateTime.Now - taskStartTime).Seconds > 0.5)
+                        await connection.Client.SendChatActionAsync(messageEvent.Message.Chat.Id, TelegramBotEnums.ChatAction.Typing);
                 }
-                else
-                {
-                    attempts++;
-                    Thread.Sleep(attemptStopwatch.Elapsed.Milliseconds);
-                }
-            }
+            });
 
-            return success;
+            waitTask.Start();
         }
     }
 }

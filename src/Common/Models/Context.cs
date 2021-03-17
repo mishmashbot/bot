@@ -12,5 +12,7 @@ namespace Ollio.Common.Models
         public DateTime DateStarted { get; set; }
         public TelegramBotTypes.User Me { get; set; }
         public List<TelegramBotTypes.User> Owners { get; set; }
+        public Random Random { get; set; }
+        public RuntimeInfo RuntimeInfo { get; set; }
     }
 }

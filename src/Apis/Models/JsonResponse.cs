@@ -1,7 +1,7 @@
 
 using System.Net.Http;
 
-namespace Ollio.Clients.Models
+namespace Ollio.Apis.Models
 {
     public class JsonResponse<T> : HttpResponse
     {

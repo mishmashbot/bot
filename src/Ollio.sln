@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ollio", "App\Ollio.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ollio.Common", "Common\Ollio.Common.csproj", "{3FA0594A-712C-4CF0-BD5C-8C87BBC9A116}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ollio.Clients", "Clients\Ollio.Clients.csproj", "{847ABCDB-A067-42CF-8DBB-73C489A5F7A3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ollio.Apis", "Clients\Ollio.Apis.csproj", "{847ABCDB-A067-42CF-8DBB-73C489A5F7A3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

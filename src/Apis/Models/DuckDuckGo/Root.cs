@@ -1,5 +1,5 @@
 
-namespace Ollio.Clients.Models.DuckDuckGo
+namespace Ollio.Apis.Models.DuckDuckGo
 {
     public class Root
     {

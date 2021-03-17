@@ -44,8 +44,8 @@ namespace Ollio.Helpers
             }
         }
 
-        public static async Task HandleMessageEdited(object sender, MessageEventArgs messageEvent, Connection connection)
-        {
+        //public static async Task HandleMessageEdited(object sender, MessageEventArgs messageEvent, Connection connection)
+        //{
             /*try
             {
                 var testGuid = Guid.NewGuid();
@@ -74,7 +74,7 @@ namespace Ollio.Helpers
             {
                 await HandleError(e, messageEvent, connection);
             }*/
-        }
+        //}
 
         static async Task HandleError(Exception exception, MessageEventArgs messageEvent, Connection connection)
         {

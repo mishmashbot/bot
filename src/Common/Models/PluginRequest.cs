@@ -6,6 +6,5 @@ namespace Ollio.Common.Models
         public Command Command { get; set; }
         public Context Context { get; set; }
         public Message Message { get; set; }
-        public RuntimeInfo Runtime { get; set; }
     }
 }

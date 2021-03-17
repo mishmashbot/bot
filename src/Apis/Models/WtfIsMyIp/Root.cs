@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Ollio.Clients.Models.WtfIsMyIp
+namespace Ollio.Apis.Models.WtfIsMyIp
 {
     public class Root
     {

@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Ollio.Clients.Http;
-using Ollio.Clients.Models;
-using Ollio.Clients.Models.Gist;
+using Ollio.Apis.Http;
+using Ollio.Apis.Models;
+using Ollio.Apis.Models.Gist;
 
-namespace Ollio.Clients
+namespace Ollio.Apis
 {
     public class Gist
     {

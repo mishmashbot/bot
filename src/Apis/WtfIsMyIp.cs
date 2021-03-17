@@ -1,9 +1,9 @@
 using System.Threading.Tasks;
-using Ollio.Clients.Http;
-using Ollio.Clients.Models;
-using Ollio.Clients.Models.WtfIsMyIp;
+using Ollio.Apis.Http;
+using Ollio.Apis.Models;
+using Ollio.Apis.Models.WtfIsMyIp;
 
-namespace Ollio.Clients
+namespace Ollio.Apis
 {
     public class WtfIsMyIp
     {

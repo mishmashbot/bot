@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Ollio.Common;
 using Ollio.Common.Enums;
@@ -107,7 +107,6 @@ namespace Ollio.Helpers
                         {
                             Command = command,
                             Context = connection.Context,
-                            Runtime = Program.RuntimeInfo,
                             Message = message
                         };
 
@@ -134,6 +133,87 @@ namespace Ollio.Helpers
             return responses;
         }
 
+        public static async Task Init(Connection connection)
+        {
+            PluginEntities.Connection castedConnected = new PluginEntities.Connection
+            {
+                Client = connection.Client,
+                Context = connection.Context,
+                Id = connection.Id,
+                Plugins = connection.Plugins,
+                Task = connection.Task,
+                Token = connection.Token
+            };
+
+            PluginEntities.Request request = new PluginEntities.Request
+            {
+                Context = connection.Context
+            };
+
+            foreach (var trigger in Plugins)
+            {
+                var plugin = trigger.Value;
+
+                if (connection.Plugins.Contains(plugin.Id))
+                {
+                    Write.Debug($"{plugin.Id}: Triggering OnInit()");
+                    plugin.OnInit();
+                    plugin.OnInit(castedConnected);
+
+                    Write.Debug($"{plugin.Id}: Triggering OnInitAsync()");
+                    var onInitTask = plugin.OnInitAsync();
+                    var onInitTaskWithConnection = plugin.OnInitAsync(castedConnected);
+                    if (onInitTask != null)
+                        await onInitTask;
+                    if (onInitTaskWithConnection != null)
+                        await onInitTaskWithConnection;
+
+                    Task tickTask = new Task(async () =>
+                    {
+                        // TODO: Use a timer instead
+                        //       Need to work out why it doesn't work though: when a command is processed,
+                        //        the timer seems to stop
+                        int tickRate = 0;
+                        
+                        try
+                        {
+                            while (connection != null)
+                            {
+                                PluginResponse response = null;
+                                PluginResponse responseAsync = null;
+
+                                response = plugin.OnTick(request);
+                                var responseAsyncTask = plugin.OnTickAsync(request);
+                                if (responseAsyncTask != null)
+                                    responseAsync = await responseAsyncTask;
+
+                                if (response != null)
+                                    Write.Debug(response.Text);
+
+                                if (response != null)
+                                    await TelegramHelpers.SendMessage(response, connection);
+
+                                if (responseAsync != null)
+                                    await TelegramHelpers.SendMessage(responseAsync, connection);
+
+                                tickRate = 3000;
+                                Thread.Sleep(tickRate);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            if(e.Message.Contains("429 (Too Many Requests)"))
+                                tickRate = tickRate+3000;
+
+                            Write.Error(e);
+                        }
+                    });
+
+                    tickTask.Start();
+                }
+            }
+        }
+
         public static int UpdatePlugins()
         {
             Plugins = new Dictionary<PluginSubscription, PluginEntities.IPlugin>();
@@ -142,7 +222,7 @@ namespace Ollio.Helpers
 
             string[] pluginPaths = CollectPluginPaths().ToArray();
 
-            if(pluginPaths.Count() > 0)
+            if (pluginPaths.Count() > 0)
             {
                 var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
                 {
@@ -174,7 +254,7 @@ namespace Ollio.Helpers
                 .GetDirectories(RuntimeUtilities.GetPluginsRoot())
                 .Select(d => Path.GetFileName(d)).ToList();
 
-            if(foundDirectories != null)
+            if (foundDirectories != null)
                 searchPaths.AddRange(foundDirectories);
 
             foreach (var searchPath in searchPaths)

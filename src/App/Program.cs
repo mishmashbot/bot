@@ -157,7 +157,7 @@ PlatformVersion: {r.PlatformVersion}
             {
                 try
                 {
-                    var dadJoke = await new Ollio.Clients.ICanHazDadJoke().Get();
+                    var dadJoke = await new Ollio.Apis.ICanHazDadJoke().Get();
                     joke = dadJoke.Data.Joke.Replace(System.Environment.NewLine, " ");
                 }
                 catch (Exception)
@@ -209,7 +209,7 @@ PlatformVersion: {r.PlatformVersion}
             string publicIpAddress = "0.0.0.0";
             try
             {
-                var wtfIsMyIp = await new Ollio.Clients.WtfIsMyIp().Get();
+                var wtfIsMyIp = await new Ollio.Apis.WtfIsMyIp().Get();
                 publicIpAddress = wtfIsMyIp.Data.IPAddress;
             }
             catch {

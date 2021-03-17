@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace Ollio.Clients.Models.Gist
+namespace Ollio.Apis.Models.Gist
 {
     public class Root
     {

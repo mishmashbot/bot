@@ -1,5 +1,5 @@
 
-namespace Ollio.Clients.Models.ICanHazDadJoke
+namespace Ollio.Apis.Models.ICanHazDadJoke
 {
     public class Root
     {
