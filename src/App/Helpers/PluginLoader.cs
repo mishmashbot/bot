@@ -146,8 +146,7 @@ namespace Ollio.Helpers
             {
                 var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
                 {
-                    Assembly pluginAssembly = LoadPlugin(pluginPath);
-                    return CreatePlugin(pluginAssembly);
+                    return CreatePlugin(pluginPath);
                 }).ToList();
 
                 // TODO: Do this in the above method to improve speed
@@ -165,21 +164,6 @@ namespace Ollio.Helpers
             return count;
         }
 
-        static IEnumerable<PluginEntities.IPlugin> CreatePlugin(Assembly assembly)
-        {
-            foreach (Type type in assembly.GetTypes())
-            {
-                if (typeof(PluginEntities.IPlugin).IsAssignableFrom(type))
-                {
-                    PluginEntities.IPlugin result = Activator.CreateInstance(type) as PluginEntities.IPlugin;
-                    if (result != null)
-                    {
-                        yield return result;
-                    }
-                }
-            }
-        }
-
         // TODO: Handle duplicate plugin IDs
         static List<string> CollectPluginPaths()
         {
@@ -190,15 +174,8 @@ namespace Ollio.Helpers
                 .GetDirectories(RuntimeUtilities.GetPluginsRoot())
                 .Select(d => Path.GetFileName(d)).ToList();
 
-            List<string> foundFiles = Directory
-                .GetFiles(RuntimeUtilities.GetPluginsRoot())
-                .Select(f => Path.GetFileName(f)).ToList();
-
             if(foundDirectories != null)
                 searchPaths.AddRange(foundDirectories);
-
-            if(foundFiles != null)
-                searchPaths.AddRange(foundFiles);
 
             foreach (var searchPath in searchPaths)
             {
@@ -217,7 +194,6 @@ namespace Ollio.Helpers
             string foundPluginPath = "";
 
             if (
-                Directory.Exists(searchPath) &&
                 Directory.GetFiles(searchPath, "*.csproj").Length > 0 &&
                 !RuntimeState.NoCompilePlugins
             )
@@ -237,7 +213,7 @@ namespace Ollio.Helpers
             }
             else
             {
-                foundPluginPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), $"{pluginName.Replace(".dll", "")}.dll");
+                foundPluginPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName, $"{pluginName}.dll");
             }
 
             if (File.Exists(foundPluginPath))
@@ -246,16 +222,16 @@ namespace Ollio.Helpers
                 return null;
         }
 
-        static Assembly LoadPlugin(string fullPath)
+        static IEnumerable<PluginEntities.IPlugin> CreatePlugin(string fullPath)
         {
             Assembly assembly = null;
+            string pluginLocation = Path.GetFullPath(fullPath);
+
+            Write.Debug($"Creating plugin: {pluginLocation}");
 
             try
             {
-                string pluginLocation = Path.GetFullPath(fullPath);
                 PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
-
-                Write.Debug($"Loading plugin: {pluginLocation}");
                 var assemblyName = new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation));
                 assembly = loadContext.LoadFromAssemblyName(assemblyName);
             }
@@ -265,7 +241,17 @@ namespace Ollio.Helpers
                 Program.Exit();
             }
 
-            return assembly;
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (typeof(PluginEntities.IPlugin).IsAssignableFrom(type))
+                {
+                    PluginEntities.IPlugin result = Activator.CreateInstance(type) as PluginEntities.IPlugin;
+                    if (result != null)
+                    {
+                        yield return result;
+                    }
+                }
+            }
         }
     }
 }
