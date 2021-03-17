@@ -26,7 +26,7 @@ namespace Ollio.Helpers
             List<PluginResponse> responses = new List<PluginResponse>();
             IEnumerable<KeyValuePair<PluginSubscription, PluginEntities.IPlugin>> triggers = null;
             var type = message.Type;
-
+            
             if (
                 message.Type == Message.MessageType.Text &&
                 message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
@@ -174,7 +174,7 @@ namespace Ollio.Helpers
                         //       Need to work out why it doesn't work though: when a command is processed,
                         //        the timer seems to stop
                         int tickRate = 0;
-                        
+
                         try
                         {
                             while (connection != null)
@@ -202,8 +202,8 @@ namespace Ollio.Helpers
                         }
                         catch (Exception e)
                         {
-                            if(e.Message.Contains("429 (Too Many Requests)"))
-                                tickRate = tickRate+3000;
+                            if (e.Message.Contains("429 (Too Many Requests)"))
+                                tickRate = tickRate + 3000;
 
                             Write.Error(e);
                         }

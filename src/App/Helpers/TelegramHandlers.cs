@@ -78,34 +78,42 @@ namespace Ollio.Helpers
 
         static async Task HandleError(Exception exception, MessageEventArgs messageEvent, Connection connection)
         {
+            bool throwError = true;
             Guid reference = Guid.NewGuid();
-            Write.Error(exception, reference);
 
-            string remark = StringUtilities.SelectRandomString(
-                new List<String> {
-                    "Abort, Retry, Fail?",
-                    "Enhance your calm",
-                    "FUBAR",
-                    "Have you tried turning it off and on again?",
-                    "It's not supposed to do that",
-                    "lp0 on fire",
-                    "Not a typewriter",
-                    "PEBCAK",
-                    "She's dead, Jim!",
-                    "сука блят"
-                }
-            );
+            if(exception.Message.Contains("message must be non-empty"))
+                throwError = false;
 
-            if (messageEvent != null && connection != null)
+            if(throwError)
             {
-                PluginResponse response = new PluginResponse
-                {
-                    ChatId = messageEvent.Message.Chat.Id,
-                    Text = $@"🚫 {exception.Message}<br /><c>{reference}</c><br /><hr /><br /><b>{remark}</b>"
-                };
+                Write.Error(exception, reference);
 
-                await TelegramHelpers.SendMessage(response, connection);
-            };
+                string remark = StringUtilities.SelectRandomString(
+                    new List<String> {
+                        "Abort, Retry, Fail?",
+                        "Enhance your calm",
+                        "FUBAR",
+                        "Have you tried turning it off and on again?",
+                        "It's not supposed to do that",
+                        "lp0 on fire",
+                        "Not a typewriter",
+                        "PEBCAK",
+                        "She's dead, Jim!",
+                        "сука блят"
+                    }
+                );
+
+                if (messageEvent != null && connection != null)
+                {
+                    PluginResponse response = new PluginResponse
+                    {
+                        ChatId = messageEvent.Message.Chat.Id,
+                        Text = $@"🚫 {exception.Message}<br /><c>{reference}</c><br /><hr /><br /><b>{remark}</b>"
+                    };
+
+                    await TelegramHelpers.SendMessage(response, connection);
+                };
+            }
         }
     }
 }
