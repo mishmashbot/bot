@@ -138,28 +138,29 @@ namespace Ollio.Helpers
         {
             Plugins = new Dictionary<PluginSubscription, PluginEntities.IPlugin>();
             List<string> pluginsToLoad = new List<string>();
+            int count = 0;
 
             string[] pluginPaths = CollectPluginPaths().ToArray();
 
-            var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
+            if(pluginPaths != null)
             {
-                Assembly pluginAssembly = LoadPlugin(pluginPath);
-                return CreatePlugin(pluginAssembly);
-            }).ToList();
+                var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
+                {
+                    Assembly pluginAssembly = LoadPlugin(pluginPath);
+                    return CreatePlugin(pluginAssembly);
+                }).ToList();
 
-            // TODO: Do this in the above method to improve speed
-            foreach (var bot in ConfigState.Bots)
-                foreach (var botPlugin in bot.Plugins)
-                    pluginsToLoad.Add(botPlugin);
+                // TODO: Do this in the above method to improve speed
+                foreach (var bot in ConfigState.Bots)
+                    foreach (var botPlugin in bot.Plugins)
+                        pluginsToLoad.Add(botPlugin);
 
-            foreach (var plugin in loadedPlugins)
-                if (pluginsToLoad.Contains(plugin.Id) && plugin.Subscription != null)
-                    Plugins.Add(plugin.Subscription, plugin);
+                foreach (var plugin in loadedPlugins)
+                    if (pluginsToLoad.Contains(plugin.Id) && plugin.Subscription != null)
+                        Plugins.Add(plugin.Subscription, plugin);
 
-            int count = Plugins.Count();
-
-            if (count > 0)
-                Write.Success($"Loaded {count} plugins");
+                count = Plugins.Count();
+            }
 
             return count;
         }

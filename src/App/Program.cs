@@ -77,6 +77,10 @@ namespace Ollio
                     Write.Warning("No plugins found");
                     Exit();
                 }
+                else
+                {
+                    Write.Success($"Loaded {pluginsCount} plugins");
+                }
 
                 if (connectionsCount == 0)
                 {
