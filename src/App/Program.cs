@@ -70,8 +70,6 @@ namespace Ollio
                 //RuntimeState.NoUpdatePlugins = arguments.NoUpdate;
 
                 var pluginsCount = PluginLoader.UpdatePlugins();
-                var connectionsCount = await ConnectionLoader.CreateConnections(ConfigState.Bots);
-
                 if (pluginsCount == 0)
                 {
                     Write.Warning("No plugins found");
@@ -82,6 +80,7 @@ namespace Ollio
                     Write.Success($"Loaded {pluginsCount} plugins");
                 }
 
+                var connectionsCount = await ConnectionLoader.CreateConnections(ConfigState.Bots);
                 if (connectionsCount == 0)
                 {
                     Write.Warning("No connections created");

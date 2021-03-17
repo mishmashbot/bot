@@ -180,17 +180,29 @@ namespace Ollio.Helpers
             }
         }
 
+        // TODO: Handle duplicate plugin IDs
         static List<string> CollectPluginPaths()
         {
             var pluginPaths = new List<string>();
+            List<string> searchPaths = new List<string>();
 
-            IEnumerable<string> plugins = Directory
+            List<string> foundDirectories = Directory
                 .GetDirectories(RuntimeUtilities.GetPluginsRoot())
-                .Select(d => Path.GetFileName(d));
+                .Select(d => Path.GetFileName(d)).ToList();
 
-            foreach (var plugin in plugins)
+            List<string> foundFiles = Directory
+                .GetFiles(RuntimeUtilities.GetPluginsRoot())
+                .Select(f => Path.GetFileName(f)).ToList();
+
+            if(foundDirectories != null)
+                searchPaths.AddRange(foundDirectories);
+
+            if(foundFiles != null)
+                searchPaths.AddRange(foundFiles);
+
+            foreach (var searchPath in searchPaths)
             {
-                string pluginPath = GetPluginPath(plugin);
+                string pluginPath = GetPluginPath(searchPath);
                 if (!String.IsNullOrEmpty(pluginPath))
                     pluginPaths.Add(pluginPath);
             }
@@ -198,15 +210,15 @@ namespace Ollio.Helpers
             return pluginPaths;
         }
 
+        // TODO: Refactor because its shit
         static string GetPluginPath(string pluginName)
         {
-            string file = "";
+            string searchPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
+            string foundPluginPath = "";
 
             if (
-                Directory.GetFiles(
-                    Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName),
-                    "*.csproj"
-                ).Length > 0 &&
+                Directory.Exists(searchPath) &&
+                Directory.GetFiles(searchPath, "*.csproj").Length > 0 &&
                 !RuntimeState.NoCompilePlugins
             )
             {
@@ -221,15 +233,15 @@ namespace Ollio.Helpers
 #endif
 
                 if (built)
-                    file = Path.Combine(projectPath, "bin", configuration, platform, $"{pluginName}.dll");
+                    foundPluginPath = Path.Combine(projectPath, "bin", configuration, platform, $"{pluginName}.dll");
             }
             else
             {
-                file = Path.Combine(RuntimeUtilities.GetPluginsRoot(), $"{pluginName}.dll");
+                foundPluginPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), $"{pluginName.Replace(".dll", "")}.dll");
             }
 
-            if (File.Exists(file))
-                return file;
+            if (File.Exists(foundPluginPath))
+                return foundPluginPath;
             else
                 return null;
         }
@@ -244,7 +256,8 @@ namespace Ollio.Helpers
                 PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
 
                 Write.Debug($"Loading plugin: {pluginLocation}");
-                assembly = loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+                var assemblyName = new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation));
+                assembly = loadContext.LoadFromAssemblyName(assemblyName);
             }
             catch (Exception e)
             {
