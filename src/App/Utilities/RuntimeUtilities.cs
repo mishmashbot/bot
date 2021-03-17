@@ -58,7 +58,7 @@ namespace Ollio.Utilities
                 catch (Win32Exception)
                 {
                     IsCompilingAvailable = false;
-                    Write.Warning(".NET SDK is unavailable. Compilation has been disabled.");
+                    Write.Warning(".NET SDK is unavailable. Compilation has been disabled");
                 }
             }
 

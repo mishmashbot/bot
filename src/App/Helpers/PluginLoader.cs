@@ -205,19 +205,26 @@ namespace Ollio.Helpers
                 Directory.GetFiles(
                     Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName),
                     "*.csproj"
-                ).Length > 0
+                ).Length > 0 &&
+                !RuntimeState.NoCompilePlugins
             )
             {
                 string projectPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
                 string platform = RuntimeUtilities.GetTargetFrameworkForProject(Path.Combine(projectPath, $"{pluginName}.csproj"));
-                bool built = RuntimeState.NoCompilePlugins ? RuntimeUtilities.Compile(projectPath) : true;
+                bool built = RuntimeUtilities.Compile(projectPath);
+
+#if DEBUG
+                string configuration = "Debug";
+#else
+                string configuration = "Release";
+#endif
 
                 if (built)
-                    file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
+                    file = Path.Combine(projectPath, "bin", configuration, platform, $"{pluginName}.dll");
             }
             else
             {
-                file = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName, $"{pluginName}.dll");
+                file = Path.Combine(RuntimeUtilities.GetPluginsRoot(), $"{pluginName}.dll");
             }
 
             if (File.Exists(file))

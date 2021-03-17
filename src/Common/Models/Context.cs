@@ -8,6 +8,7 @@ namespace Ollio.Common.Models
     public class Context
     {
         public ConfigModels.BotConfig Config { get; set; }
+        public DateTime DateConnected { get; set; }
         public DateTime DateStarted { get; set; }
         public TelegramBotTypes.User Me { get; set; }
         public List<TelegramBotTypes.User> Owners { get; set; }

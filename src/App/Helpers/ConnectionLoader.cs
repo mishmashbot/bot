@@ -5,20 +5,22 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Ollio.Common;
 using Ollio.Common.Models;
+using Ollio.State;
 using ConfigModels = Ollio.Common.Models.Config;
 using TelegramBotTypes = Telegram.Bot.Types;
+using System.Diagnostics;
 
 namespace Ollio.Helpers
 {
     public class ConnectionLoader
     {
-        public static bool CreateConnection(ConfigModels.Bot bot)
+        public async static Task<bool> CreateConnection(ConfigModels.Bot bot)
         {
             List<TelegramBotTypes.User> owners = new List<TelegramBotTypes.User>();
 
-            if(bot.Owners != null)
+            if (bot.Owners != null)
             {
-                foreach(var owner in bot.Owners)
+                foreach (var owner in bot.Owners)
                 {
                     TelegramBotTypes.User user = new TelegramBotTypes.User
                     {
@@ -43,75 +45,128 @@ namespace Ollio.Helpers
                 Token = bot.Config.Token
             };
 
-            return CreateConnection(connection);
+            return await CreateConnection(connection);
         }
 
-        public static int CreateConnections(List<ConfigModels.Bot> bots)
+        public async static Task<int> CreateConnections(List<ConfigModels.Bot> bots)
         {
             int count = 0;
 
             foreach (var bot in bots)
             {
-                var success = CreateConnection(bot);
+                var success = await CreateConnection(bot);
 
-                if(success)
+                if (success)
                     count++;
             }
 
             return count;
         }
 
-        public static bool CreateConnection(Connection connection)
+        public async static Task<bool> CreateConnection(Connection connection)
         {
+            bool hasConnected = false;
+            bool hasStarted = false;
+
             connection.Client = new TelegramBotClient(connection.Token);
-
-            if (connection.Client.TestApiAsync().Result)
+            connection.Thread = new Thread(async () => await SetHandlers(connection))
             {
-                connection.Thread = new Thread(async () => await StartConnection(connection))
-                {
-                    Name = connection.Id
-                };
+                Name = connection.Id
+            };
 
-                try
-                {
-                    connection.Thread.Start();
+            var apiTestResult = await TestConnection(connection);
 
-                    connection.Context.DateStarted = DateTime.Now;
-                    connection.Context.Me = connection.Client.GetMeAsync().Result;
-                    
-                    Write.Success($"{connection.Id}: Connected as @{connection.Context.Me.Username} ({connection.Context.Me.Id})");
-                    return true;
-                }
-                catch (ThreadStartException e)
-                {
-                    Write.Error(e);
-                }
+            if (apiTestResult)
+            {
+                connection.Context.DateConnected = DateTime.Now;
+                connection.Context.Me = await connection.Client.GetMeAsync();
+                Write.Success($"{connection.Id}: Connected as @{connection.Context.Me.Username} ({connection.Context.Me.Id})");
+                hasConnected = true;
             }
             else
             {
                 Write.Warning($"{connection.Id}: Unable to connect to Telegram");
             }
 
-            return false;
+            if (hasConnected)
+            {
+                try
+                {
+                    connection.Thread.Start();
+                    Write.Debug($"{connection.Id}: Started on thread #{connection.Thread.ManagedThreadId}");
+                    connection.Context.DateStarted = DateTime.Now;
+                    hasStarted = true;
+                }
+                catch (ThreadStartException e)
+                {
+                    Write.Error(e);
+                    connection.Client = null;
+                }
+            }
+
+            if (hasConnected && hasStarted)
+                return true;
+            else
+                return false;
         }
 
-        static async Task StartConnection(Connection connection)
+        static async Task SetHandlers(Connection connection)
         {
             try
             {
                 await TelegramHelpers.SetCommands(connection);
 
-                connection.Client.OnMessage += async (sender, e) =>
-                    await TelegramHandlers.HandleMessage(sender, e, connection);
-                connection.Client.OnMessageEdited += async (sender, e) =>
-                    await TelegramHandlers.HandleMessageEdited(sender, e, connection);
+                if (!RuntimeState.DryRun)
+                {
+                    connection.Client.OnMessage += async (sender, e) =>
+                        await TelegramHandlers.HandleMessage(sender, e, connection);
+                    connection.Client.OnMessageEdited += async (sender, e) =>
+                        await TelegramHandlers.HandleMessageEdited(sender, e, connection);
 
-                connection.Client.StartReceiving();
+                    connection.Client.StartReceiving();
+                }
             }
             catch (Exception e)
             {
                 Write.Error(e);
             }
+        }
+
+        static async Task<bool> TestConnection(Connection connection)
+        {
+            const int maxAttempts = 3;
+            int attempts = 0;
+            Stopwatch attemptStopwatch = new Stopwatch();
+            bool success = false;
+
+            // TODO: Allow user to Ctrl+C this
+            while(!success && attempts != maxAttempts)
+            {
+                string attemptMessage = $"{connection.Id}: Testing connectivity to Telegram";
+                if(attempts > 0)
+                    attemptMessage += $" (attempt {attempts+1})...";
+                else
+                    attemptMessage += "...";
+                Write.Debug(attemptMessage);
+
+                attemptStopwatch.Start();
+                bool result = await connection.Client.TestApiAsync();
+                attemptStopwatch.Stop();
+                attemptStopwatch.Reset();
+
+                if(result)
+                {
+                    success = true;
+                    break;
+                }
+                else
+                {
+                    attempts++;
+                    Thread.Sleep(attemptStopwatch.Elapsed.Milliseconds);
+                }
+            }
+
+            return success;
         }
     }
 }

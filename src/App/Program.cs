@@ -7,7 +7,6 @@ using CommandLine;
 using Figgle;
 using Microsoft.DotNet.PlatformAbstractions;
 using Ollio.Common;
-using Ollio.Common.Enums;
 using Ollio.Common.Models;
 using Ollio.Helpers;
 using Ollio.State;
@@ -25,6 +24,8 @@ namespace Ollio
         {
             /*[Option('c', "config", HelpText = "Location of configuration directory.")]
             public string ConfigDirectory { get; set; }*/
+            [Option("dry-run", HelpText = "Connect to Telegram but do not respond.")]
+            public bool DryRun { get; set; }
             //[Option('n', "no-update", HelpText = "Stop plugins installing/updating from repository.")]
             //public bool NoUpdate { get; set; }
             [Option("no-compile", HelpText = "Stop compilation of projects in ./plugins.")]
@@ -34,15 +35,14 @@ namespace Ollio
         static async Task Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
+
             Random = new Random();
             await SetRuntimeInfo();
             await PrintStartupMessage(RuntimeInfo);
 
-            if(PreflightChecks())
-                /*await*/ Parser.Default.ParseArguments<Arguments>(args)
-                    .WithParsed(Run);
-                    //.WithParsedAsync(Run);
+            if (PreflightChecks())
+                await Parser.Default.ParseArguments<Arguments>(args)
+                    .WithParsedAsync(Run);
             else
                 Exit();
         }
@@ -53,7 +53,7 @@ namespace Ollio
             Environment.Exit(Int32.MinValue);
         }
 
-        static void Run(Arguments arguments)
+        static async Task Run(Arguments arguments)
         {
             Console.CancelKeyPress += (sender, e) =>
             {
@@ -65,22 +65,28 @@ namespace Ollio
             {
                 PrintRuntimeInfo();
 
+                RuntimeState.DryRun = arguments.DryRun;
                 RuntimeState.NoCompilePlugins = arguments.NoCompile;
                 //RuntimeState.NoUpdatePlugins = arguments.NoUpdate;
 
                 var pluginsCount = PluginLoader.UpdatePlugins();
-                var connectionsCount = ConnectionLoader.CreateConnections(ConfigState.Bots);
+                var connectionsCount = await ConnectionLoader.CreateConnections(ConfigState.Bots);
 
                 if (pluginsCount == 0)
                 {
-                    Write.Warning("No plugins found.");
+                    Write.Warning("No plugins found");
                     Exit();
                 }
 
                 if (connectionsCount == 0)
                 {
-                    Write.Warning("No connections created.");
+                    Write.Warning("No connections created");
                     Exit();
+                }
+
+                if(RuntimeState.DryRun)
+                {
+                    Write.Warning($"Running dry; no requests will be handled");
                 }
             }
             catch (Exception e)
@@ -100,14 +106,14 @@ namespace Ollio
 
             if (isSingleFileBinary)
             {
-                Write.Warning($"Ollio was built as a single-file binary (/p:PublishSingleFile=true), which is not yet supported.");
+                Write.Warning($"Ollio was built as a single-file binary (/p:PublishSingleFile=true), which is unstable");
                 success = false;
             }
 
             if (isFirstTimeLaunch)
             {
                 // TODO: Create config
-                Write.Warning($"Settings file did not exist. Please edit './config/config.yaml' and re-run."); // TODO: Programatically get config location
+                Write.Warning($"Settings file did not exist. Please edit './config/config.yaml' and re-run"); // TODO: Programatically get config location
                 success = false;
             }
 
@@ -129,7 +135,7 @@ Platform:        {r.Platform}
 PlatformVersion: {r.PlatformVersion}
 {Environment.NewLine}"; // NOTE: NewLine is for readability
 
-            if(debugOnly)
+            if (debugOnly)
                 Write.Debug(runtimeInfoString);
             else
                 Write.Info(runtimeInfoString);
@@ -144,12 +150,15 @@ PlatformVersion: {r.PlatformVersion}
             string joke = "";
             string version = runtime.GetVersion(includeBuild: true, includeCommit: true, includeRelease: true);
 
-            if(printJoke)
+            if (printJoke)
             {
-                try {
+                try
+                {
                     var dadJoke = await new Ollio.Clients.ICanHazDadJoke().Get();
                     joke = dadJoke.Data.Joke.Replace(System.Environment.NewLine, " ");
-                } catch(Exception) {
+                }
+                catch (Exception)
+                {
                     printJoke = false;
                 }
             }
@@ -169,9 +178,9 @@ PlatformVersion: {r.PlatformVersion}
             Console.WriteLine(runtime.Platform);
             Console.ForegroundColor = ConsoleColor.Gray;
 
-            if(printJoke)
+            if (printJoke)
                 Console.WriteLine($" {joke}");
-        
+
             Console.WriteLine("");
             Write.Reset();
         }
@@ -180,11 +189,9 @@ PlatformVersion: {r.PlatformVersion}
         {
             RuntimeInfo = new RuntimeInfo();
 
-            var informalVersionAttribute = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            var wtfIsMyIp = await new Ollio.Clients.WtfIsMyIp().Get();
-
             string commit = "";
-            if(informalVersionAttribute?.InformationalVersion != null)
+            var informalVersionAttribute = Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            if (informalVersionAttribute?.InformationalVersion != null)
             {
                 var informalVersion = informalVersionAttribute.InformationalVersion;
                 commit = informalVersion.Substring(informalVersion.IndexOf('+') + 1);
@@ -196,11 +203,21 @@ PlatformVersion: {r.PlatformVersion}
                 .Replace("elementary", "elementaryOS")
                 .Replace("ubuntu", "Ubuntu");
 
+            string publicIpAddress = "0.0.0.0";
+            try
+            {
+                var wtfIsMyIp = await new Ollio.Clients.WtfIsMyIp().Get();
+                publicIpAddress = wtfIsMyIp.Data.IPAddress;
+            }
+            catch {
+                Write.Warning("Could not fetch public IP address");
+            }
+
             RuntimeInfo.AppCommit = commit;
             RuntimeInfo.AppVersion = Assembly.GetExecutingAssembly().GetName().Version;
             RuntimeInfo.DateStarted = DateTime.Now;
             RuntimeInfo.Hostname = System.Net.Dns.GetHostName();
-            RuntimeInfo.IPAddress = wtfIsMyIp.Data.IPAddress;
+            RuntimeInfo.IPAddress = publicIpAddress;
             RuntimeInfo.OS = os;
             RuntimeInfo.OSVersion = RuntimeEnvironment.OperatingSystemVersion;
             RuntimeInfo.Platform = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
