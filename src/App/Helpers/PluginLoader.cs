@@ -142,7 +142,7 @@ namespace Ollio.Helpers
 
             string[] pluginPaths = CollectPluginPaths().ToArray();
 
-            if(pluginPaths != null)
+            if(pluginPaths.Count() > 0)
             {
                 var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
                 {
