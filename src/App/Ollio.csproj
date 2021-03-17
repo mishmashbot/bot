@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Ollio.Common.csproj" />
-    <ProjectReference Include="..\Config\Ollio.Config.csproj" />
     <ProjectReference Include="..\Plugin\Ollio.Plugin.csproj" />
     <ProjectReference Include="..\Clients\Ollio.Clients.csproj" />
   </ItemGroup>
@@ -24,9 +23,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <PackageId>Ollio</PackageId>
     <Version>0.1.0</Version>
     <Authors>Ducky &lt;ducky@zyrio.cloud&gt;</Authors>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun> <!-- NOTE: Only works with PublishSingleFile -->
   </PropertyGroup>
 
 </Project>

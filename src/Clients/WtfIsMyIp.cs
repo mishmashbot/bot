@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Ollio.Clients.Http;
+using Ollio.Clients.Models;
 using Ollio.Clients.Models.WtfIsMyIp;
 
 namespace Ollio.Clients
@@ -8,7 +9,7 @@ namespace Ollio.Clients
     {
         const string BaseUrl = "https://wtfismyip.com/json";
 
-        public async Task<Root> Get()
+        public async Task<JsonResponse<Root>> Get()
         {
             var client = new JsonClient<Root>();
             var request = await client.Get($"{BaseUrl}");

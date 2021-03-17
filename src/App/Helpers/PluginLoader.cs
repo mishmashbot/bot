@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Ollio.Common;
+using Ollio.Common.Enums;
 using Ollio.Common.Models;
-using Ollio.Common.Types;
+using Ollio.State;
 using Ollio.Utilities;
 using PluginEntities = Ollio.Plugin;
 
@@ -14,10 +17,9 @@ namespace Ollio.Helpers
 {
     public static class PluginLoader
     {
-        public static bool NoCompile { get; set; }
         public static Dictionary<PluginSubscription, PluginEntities.IPlugin> Plugins { get; set; }
 
-        public static List<PluginResponse> Invoke(Message message, Context context, Connection connection)
+        public static async Task<List<PluginResponse>> Invoke(Message message, Connection connection)
         {
             Command command = null;
             bool isCommand = false;
@@ -29,45 +31,45 @@ namespace Ollio.Helpers
                 message.Type == Message.MessageType.Text &&
                 message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
                 (
-                    (context.EventType == EventType.Message && message.Text.StartsWith(connection.Prefix)) ||
-                    context.EventType == EventType.Callback
+                    (message.EventType == EventType.Message && message.Text.StartsWith(connection.Context.Config.Prefix)) ||
+                    message.EventType == EventType.Callback
                 )
             )
             {
-                Regex commandRegex = null;
-                Match commandMatch = null;
+                Regex commandRegex = new Regex(@$"^(?<cmd>\{connection.Context.Config.Prefix}\w*|\w*:)(?:$|@{connection.Context.Me.Username})?(?:$|\s)?(?<args>.*)");
+                Match commandMatch = commandRegex.Match(message.Text);
 
-                switch(context.EventType)
+                if (commandMatch.Success)
                 {
-                    /*case EventType.Callback:
-                        commandRegex = new Regex("");
-                        break;*/
-                    case EventType.Message:
-                        commandRegex = new Regex(@$"^\/(?<cmd>\w*)(?:$|@{connection.Me.Username.ToLower()}$)");
-                        break;
-                }
+                    var argsGroup = commandMatch.Groups["args"];
+                    var cmdGroup = commandMatch.Groups["cmd"];
 
-                commandMatch = commandRegex.Match(message.Text);
-                if(commandMatch.Success)
-                {
                     command = new Command
                     {
-                        /*Arguments =,*/
-                        Directive = commandMatch.Groups["cmd"].Value.ToLower()
+                        Argument = (argsGroup != null) ? argsGroup.Value : "",
+                        Directive = (cmdGroup != null) ? cmdGroup.Value.ToLower().Replace(connection.Context.Config.Prefix.ToString(), "") : "" // NOTE: This should never be null, but it looks nicer
                     };
 
-                    Write.Debug(command.Directive);
+                    switch (message.EventType)
+                    {
+                        case EventType.Callback:
+                            command.Arguments = command.Argument.Split(":");
+                            triggers = Plugins
+                                .Where(p => p.Key.Callbacks.Contains(command.Directive));
+                            break;
+                        case EventType.Message:
+                            command.Arguments = command.Argument.Split(" ");
+                            triggers = Plugins
+                                .Where(p => p.Key.Commands.ContainsKey(command.Directive));
+                            break;
+                    }
 
-                    message.Text = message.Text.Replace(command.Directive, "").Trim();
-                    triggers = Plugins
-                        .Where(p => p.Key.Commands.Contains(command.Directive));
-
-                    if(triggers != null)
+                    if (triggers != null)
                         isCommand = true;
                 }
             }
 
-            if(!isCommand)
+            if (!isCommand)
             {
                 switch (type)
                 {
@@ -98,22 +100,33 @@ namespace Ollio.Helpers
 
                     if (isValidPlugin)
                     {
-                        PluginEntities.Request castedRequest = new PluginEntities.Request
+                        PluginResponse response = null;
+                        PluginResponse responseAsync = null;
+
+                        PluginEntities.Request request = new PluginEntities.Request
                         {
                             Command = command,
+                            Context = connection.Context,
                             Runtime = Program.RuntimeInfo,
                             Message = message
                         };
 
-                        PluginResponse response = null;
-
-                        switch(context.EventType) {
+                        switch (message.EventType)
+                        {
                             case EventType.Message:
-                                response = plugin.OnMessage(castedRequest);
+                                // INVESTIGATE: Is firing both of these slow?
+                                response = plugin.OnMessage(request);
+                                var responseAsyncTask = plugin.OnMessageAsync(request);
+                                if (responseAsyncTask != null)
+                                    responseAsync = await responseAsyncTask;
                                 break;
                         }
 
-                        responses.Add(response);
+                        if (response != null)
+                            responses.Add(response);
+
+                        if (responseAsync != null)
+                            responses.Add(responseAsync);
                     }
                 }
             }
@@ -121,12 +134,12 @@ namespace Ollio.Helpers
             return responses;
         }
 
-        // TODO: Not load in plugins we don't need!
         public static int UpdatePlugins()
         {
             Plugins = new Dictionary<PluginSubscription, PluginEntities.IPlugin>();
+            List<string> pluginsToLoad = new List<string>();
 
-            string[] pluginPaths = CollectPlugins().ToArray();
+            string[] pluginPaths = CollectPluginPaths().ToArray();
 
             var loadedPlugins = pluginPaths.SelectMany(pluginPath =>
             {
@@ -134,23 +147,39 @@ namespace Ollio.Helpers
                 return CreatePlugin(pluginAssembly);
             }).ToList();
 
+            // TODO: Do this in the above method to improve speed
+            foreach (var bot in ConfigState.Bots)
+                foreach (var botPlugin in bot.Plugins)
+                    pluginsToLoad.Add(botPlugin);
+
             foreach (var plugin in loadedPlugins)
-            {
-                if (plugin.Subscription != null)
-                {
+                if (pluginsToLoad.Contains(plugin.Id) && plugin.Subscription != null)
                     Plugins.Add(plugin.Subscription, plugin);
-                }
-            }
 
             int count = Plugins.Count();
 
-            if(count > 0)
+            if (count > 0)
                 Write.Success($"Loaded {count} plugins");
 
             return count;
         }
 
-        static List<string> CollectPlugins()
+        static IEnumerable<PluginEntities.IPlugin> CreatePlugin(Assembly assembly)
+        {
+            foreach (Type type in assembly.GetTypes())
+            {
+                if (typeof(PluginEntities.IPlugin).IsAssignableFrom(type))
+                {
+                    PluginEntities.IPlugin result = Activator.CreateInstance(type) as PluginEntities.IPlugin;
+                    if (result != null)
+                    {
+                        yield return result;
+                    }
+                }
+            }
+        }
+
+        static List<string> CollectPluginPaths()
         {
             var pluginPaths = new List<string>();
 
@@ -181,10 +210,9 @@ namespace Ollio.Helpers
             {
                 string projectPath = Path.Combine(RuntimeUtilities.GetPluginsRoot(), pluginName);
                 string platform = RuntimeUtilities.GetTargetFrameworkForProject(Path.Combine(projectPath, $"{pluginName}.csproj"));
-                //bool built = NoCompile ? RuntimeUtilities.Compile(projectPath) : true;
-                bool built = RuntimeUtilities.Compile(projectPath);
+                bool built = RuntimeState.NoCompilePlugins ? RuntimeUtilities.Compile(projectPath) : true;
 
-                if(built)
+                if (built)
                     file = Path.Combine(projectPath, "bin", "Debug", platform, $"{pluginName}.dll");
             }
             else
@@ -198,27 +226,25 @@ namespace Ollio.Helpers
                 return null;
         }
 
-        static IEnumerable<PluginEntities.IPlugin> CreatePlugin(Assembly assembly)
-        {
-            foreach (Type type in assembly.GetTypes())
-            {
-                if (typeof(PluginEntities.IPlugin).IsAssignableFrom(type))
-                {
-                    PluginEntities.IPlugin result = Activator.CreateInstance(type) as PluginEntities.IPlugin;
-                    if (result != null)
-                    {
-                        yield return result;
-                    }
-                }
-            }
-        }
-
         static Assembly LoadPlugin(string fullPath)
         {
-            string pluginLocation = Path.GetFullPath(fullPath);
-            Write.Debug($"Loading plugin: {pluginLocation}");
-            PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
-            return loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+            Assembly assembly = null;
+
+            try
+            {
+                string pluginLocation = Path.GetFullPath(fullPath);
+                PluginLoadContext loadContext = new PluginLoadContext(pluginLocation);
+
+                Write.Debug($"Loading plugin: {pluginLocation}");
+                assembly = loadContext.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(pluginLocation)));
+            }
+            catch (Exception e)
+            {
+                Write.Error(e);
+                Program.Exit();
+            }
+
+            return assembly;
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -42,7 +43,7 @@ namespace Ollio.Utilities
                     };
 
                     process.Start();
-                    Write.Info($"Comping project: {project}");
+                    Write.Info($"Compiling project: {project}");
                     string result = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
 
@@ -82,9 +83,7 @@ namespace Ollio.Utilities
 
         public static string GetRootDirectory()
         {
-            var binaryLocation = Assembly.GetExecutingAssembly().Location;
-            if(binaryLocation == null)
-                binaryLocation = Process.GetCurrentProcess().MainModule.FileName;
+            var binaryLocation = AppContext.BaseDirectory;
 
 #if DEBUG
             return Path.GetFullPath(Path.Combine(
@@ -118,6 +117,30 @@ namespace Ollio.Utilities
             }
 
             return platform;
+        }
+
+        public static bool IsSingleFileBinary()
+        {
+            // TODO: Unfortunately, single-file binaries don't seem to work yet, so we need to
+            //        check if this was built as a single-file binary (/p:PublishSingleFile=true)
+            //       When Ollio tries to load up plugins, it throws this error:
+            //        [Oops] System.InvalidOperationException: Cannot load hostpolicy library. AssemblyDependencyResolver is currently only supported if the runtime is hosted through hostpolicy library.
+            //        ---> System.EntryPointNotFoundException: Unable to find an entry point named 'corehost_set_error_writer' in shared library 'libhostpolicy'.
+            //        at Interop.HostPolicy.corehost_set_error_writer(IntPtr errorWriter)
+            //        at System.Runtime.Loader.AssemblyDependencyResolver..ctor(String componentAssemblyPath)
+
+            // TODO: Better way of checking if this is a single-file binary
+#if DEBUG
+            return false;
+#else
+            var root = GetRootDirectory();
+            var testFile = Path.Combine(GetRootDirectory(), "Telegram.Bot.dll");
+
+            if(File.Exists(testFile))
+                return false;
+            else
+                return true;
+#endif
         }
     }
 }

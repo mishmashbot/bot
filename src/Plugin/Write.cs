@@ -7,8 +7,8 @@ namespace Ollio.Plugin
         public static void Debug(string message, [CallerMemberName] string caller = null) =>
             Ollio.Common.Write.Debug(message, caller);
 
-        public static void Error(Exception exception, [CallerMemberName] string caller = null) =>
-            Ollio.Common.Write.Error(exception, caller);
+        public static void Error(Exception exception, Guid? reference = null, [CallerMemberName] string caller = null) =>
+            Ollio.Common.Write.Error(exception, reference, caller);
 
         public static void Info(string message, [CallerMemberName] string caller = null) =>
             Ollio.Common.Write.Info(message, caller);

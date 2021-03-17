@@ -13,14 +13,15 @@ namespace Ollio.Common
 #endif
         }
 
-        public static void Error(Exception exception, [CallerMemberName] string caller = null)
+        public static void Error(Exception exception, Guid? reference = null, [CallerMemberName] string caller = null)
         {
+            string message = "";
 
-#if DEBUG
-            string message = $"{exception.ToString()}";
-#else
-            string message = $@"{exception.Message}";
-#endif
+            if(reference != null && reference != Guid.Empty)
+                message = $"{reference.ToString()}{Environment.NewLine}";
+
+            message += $"{exception.ToString()}";
+
             Print(message, "Oops", caller, ConsoleColor.Red, ConsoleColor.White);
         }
 

@@ -2,144 +2,117 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Telegram.Bot.Args;
 using Ollio.Common;
 using Ollio.Common.Models;
-using Ollio.Common.Types;
-using Ollio.Utilities;
 using TelegramBotEnums = Telegram.Bot.Types.Enums;
+using TelegramBotTypes = Telegram.Bot.Types;
 
 namespace Ollio.Helpers
 {
     public class TelegramHelpers
     {
-        public static async Task HandleMessage(
-            object sender, MessageEventArgs messageEvent,
-            Connection connection
-        )
-        {
-            try
-            {
-                Context context = GetContext(connection, EventType.Message);
-                Message message = ParseMessageEvent(messageEvent);
-                
-                List<PluginResponse> responses = PluginLoader.Invoke(message, context, connection);
+        const TelegramBotEnums.ParseMode DefaultParseMode = TelegramBotEnums.ParseMode.Html;
 
-                if (responses != null)
+        public static async Task SetCommands(Connection connection)
+        {
+            List<TelegramBotTypes.BotCommand> commands = new List<TelegramBotTypes.BotCommand>();
+
+            if (connection.Context.Config.Prefix == '/')
+            {
+                foreach (var pluginCollection in PluginLoader.Plugins)
                 {
-                    foreach (var response in responses)
+                    if (connection.Plugins.Contains(pluginCollection.Value.Id))
                     {
-                        await connection.Client.SendTextMessageAsync(
-                            -1001127490424,
-                            response.Message.Text
-                        );
+                        foreach (var command in pluginCollection.Value.Subscription.Commands)
+                        {
+                            var description = command.Value;
+
+                            if (command.Value.Length < 3) // NOTE: Telegram requires descriptions to be more than 3 characters
+                                description = "(No description)";
+
+                            TelegramBotTypes.BotCommand botCommand = new TelegramBotTypes.BotCommand
+                            {
+                                Command = $"/{command.Key}",
+                                Description = description
+                            };
+
+                            commands.Add(botCommand);
+                        }
                     }
                 }
             }
-            catch (Exception e)
+
+            // TODO: Sort list alphabetically
+
+            await connection.Client.SetMyCommandsAsync(commands.AsEnumerable());
+
+#if DEBUG
+            var setCommands = await connection.Client.GetMyCommandsAsync();
+
+            foreach (var setCommand in setCommands)
             {
-                Write.Error(e);
+                Write.Debug($"Set command ({connection.Context.Me.Id}): {setCommand.Command} - {setCommand.Description}");
             }
+#endif
         }
 
-        static Context GetContext(Connection connection, EventType eventType)
+        public static async Task<TelegramBotTypes.Message> EditMessage(HistoryMessage historyMessage, PluginResponse response, Connection connection)
         {
-            Context context = new Context();
+            TelegramBotTypes.Message editedMessage = null;
 
-            context.EventType = eventType;
+            if (!String.IsNullOrEmpty(response.Text))
+                response.Text = ParseTextHtml(response.Text);
 
-            return context;
-        }
-
-        static Message ParseMessageEvent(MessageEventArgs messageEvent)
-        {
-            Message message = new Message();
-
-            var payload = messageEvent.Message;
-            TelegramBotEnums.MessageType type = messageEvent.Message.Type;
-
-            switch (type)
+            switch(response.MessageType)
             {
-                //case TelegramBotEnums.MessageType.Animation:
-                //    break;
-
-                case TelegramBotEnums.MessageType.Audio:
-                    message.CreateAudio(
-                        new MessageFile(payload.Audio.FileId),
-                        payload.Caption,
-                        payload.Audio.Duration,
-                        payload.Audio.Performer,
-                        payload.Audio.Title
+                case Message.MessageType.Text:
+                    editedMessage = await connection.Client.EditMessageTextAsync(
+                        historyMessage.ChatId,
+                        historyMessage.MessageId,
+                        response.Text,
+                        DefaultParseMode,
+                        response.DisableWebpagePreview,
+                        null // TODO: Reply markup!
                     );
                     break;
-
-                /*case TelegramBotEnums.MessageType.Contact:
-                    break;*/
-
-                /*case TelegramBotEnums.MessageType.Dice:
-                    break;*/
-
-                case TelegramBotEnums.MessageType.Document:
-                    message.CreateDocument(
-                        new MessageFile(payload.Document.FileId),
-                        payload.Caption
-                    );
-                    break;
-
-                /*case TelegramBotEnums.MessageType.Game:
-                    break;*/
-
-                /*case TelegramBotEnums.MessageType.Invoice:
-                    break;*/
-
-                /*case TelegramBotEnums.MessageType.Location:
-                    break;*/
-
-                case TelegramBotEnums.MessageType.Photo:
-                    message.CreatePhoto(
-                        payload.Photo.ToList().Select(p =>
-                            new MessageFile(p.FileId)
-                        ).ToList(),
-                        payload.Caption
-                    );
-                    break;
-
-                /*case TelegramBotEnums.MessageType.Poll:
-                    break;*/
-
-                case TelegramBotEnums.MessageType.Sticker:
-                    message.CreateSticker(
-                        new MessageFile(payload.Sticker.FileId)
-                    );
-                    break;
-
-                case TelegramBotEnums.MessageType.Text:
-                    message.CreateText(
-                        payload.Text
-                    );
-                    break;
-
-                /*case TelegramBotEnums.MessageType.Venue:
-                    break;*/
-
-                case TelegramBotEnums.MessageType.Video:
-                    message.CreateVideo(
-                        new MessageFile(payload.Video.FileId),
-                        payload.Caption,
-                        payload.Video.Duration,
-                        payload.Video.Height,
-                        payload.Video.Width
-                    );
-                    break;
-
-                    /*case TelegramBotEnums.MessageType.VideoNote
-                        break;*/
-
-                    /*case TelegramBotEnums.MessageType.Voice:
-                        break;*/
             }
 
-            return message;
+            return editedMessage;
+        }
+
+        public static async Task<TelegramBotTypes.Message> SendMessage(PluginResponse response, Connection connection)
+        {
+            TelegramBotTypes.Message sentMessage = null;
+
+            if (!String.IsNullOrEmpty(response.Text))
+                response.Text = ParseTextHtml(response.Text);
+
+            switch (response.MessageType)
+            {
+                case Message.MessageType.Text:
+                    sentMessage = await connection.Client.SendTextMessageAsync(
+                        response.ChatId,
+                        response.Text,
+                        DefaultParseMode,
+                        response.DisableWebpagePreview,
+                        response.DisableNotification,
+                        response.ReplyToMessageId,
+                        null // TODO: Reply markup!
+                    );
+                    break;
+            }
+
+            return sentMessage;
+        }
+
+        static string ParseTextHtml(string text)
+        {
+            text = text
+                .Replace("<br />", Environment.NewLine)
+                .Replace("<hr />", "—")
+                .Replace("c>", "code>");
+
+            return text;
         }
     }
 }

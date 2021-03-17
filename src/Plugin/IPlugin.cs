@@ -1,4 +1,5 @@
-﻿
+﻿using System.Threading.Tasks;
+
 namespace Ollio.Plugin
 {
     public interface IPlugin
@@ -9,6 +10,7 @@ namespace Ollio.Plugin
         int Version { get; }
     
         Response OnMessage(Request request) { return null; }
+        Task<Response> OnMessageAsync(Request request) { return null; }
         void OnInit() { }
         Response OnTick(Request request) { return null; }
     }
