@@ -26,7 +26,6 @@
     <Version>0.1.0</Version>
     <Authors>Ducky &lt;ducky@zyrio.cloud&gt;</Authors>
     <PublishSingleFile>false</PublishSingleFile>
-    <!--<PublishReadyToRun>true</PublishReadyToRun> !-- NOTE: Only works with PublishSingleFile -->
   </PropertyGroup>
 
 </Project>
