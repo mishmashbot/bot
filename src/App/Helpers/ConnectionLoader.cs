@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Telegram.Bot;
+using Ollio.Clients;
 using Ollio.Common;
+using Ollio.Common.Enums;
 using Ollio.Common.Models;
 using Ollio.State;
 using ConfigModels = Ollio.Common.Models.Config;
 using TelegramBotArgs = Telegram.Bot.Args;
-using TelegramBotEnums = Telegram.Bot.Types.Enums;
 using TelegramBotTypes = Telegram.Bot.Types;
 
 namespace Ollio.Helpers
@@ -17,7 +17,7 @@ namespace Ollio.Helpers
     {
         public async static Task<bool> CreateConnection(ConfigModels.Bot bot)
         {
-            List<TelegramBotTypes.User> owners = new List<TelegramBotTypes.User>();
+            /*List<TelegramBotTypes.User> owners = new List<TelegramBotTypes.User>();
 
             if (bot.Owners != null)
             {
@@ -30,12 +30,12 @@ namespace Ollio.Helpers
                     };
                     owners.Add(user);
                 }
-            }
+            }*/
 
             var context = new Context
             {
                 Config = bot.Config,
-                Owners = owners,
+                //Owners = owners,
                 Random = Program.Random
             };
 
@@ -70,15 +70,15 @@ namespace Ollio.Helpers
             bool hasConnected = false;
             bool hasStarted = false;
 
-            connection.Client = new TelegramBotClient(connection.Token);
+            connection.Client = ClientHelpers.CreateClient(connection);
             connection.Task = new Task(async () => await SetHandlers(connection));
 
-            var apiTestResult = await TelegramHelpers.TestConnection(connection);
+            var apiTestResult = await ClientHelpers.TestConnection(connection);
 
             if (apiTestResult)
             {
                 connection.Context.DateConnected = DateTime.Now;
-                connection.Context.Me = await connection.Client.GetMeAsync();
+                connection.Context.Me = await connection.Client.GetMe();
                 connection.Context.RuntimeInfo = Program.RuntimeInfo;
                 Write.Success($"{connection.Id}: Connected as @{connection.Context.Me.Username} ({connection.Context.Me.Id})");
                 hasConnected = true;
@@ -114,16 +114,18 @@ namespace Ollio.Helpers
         {
             try
             {
-                await TelegramHelpers.SetCommands(connection);
+                await ClientHelpers.SetCommands(connection);
 
                 if (!RuntimeState.DryRun)
                 {
-                    connection.Client.OnMessage += (sender, e) =>
-                        Respond(connection, e, (async () => await TelegramHandlers.HandleMessage(sender, e, connection)));
-                    //connection.Client.OnMessageEdited += async (sender, e) =>
-                    //    await TelegramHandlers.HandleMessageEdited(sender, e, connection);
+                    switch(connection.Client.Type)
+                    {
+                        case ClientType.Telegram:
+                            SetTelegramHandlers(connection);
+                            break;
+                    }
 
-                    connection.Client.StartReceiving();
+                    await connection.Client.Connect();
                     await PluginLoader.Init(connection);
                 }
             }
@@ -131,6 +133,16 @@ namespace Ollio.Helpers
             {
                 Write.Error(e);
             }
+        }
+
+        static void SetTelegramHandlers(Connection connection)
+        {
+            var telegramClient = (TelegramClient)connection.Client;
+
+            telegramClient.Client.OnMessage += (sender, e) =>
+                Respond(connection, e, (async () => await TelegramHandlers.HandleMessage(sender, e, connection)));
+            //connection.Client.OnMessageEdited += async (sender, e) =>
+            //    await TelegramHandlers.HandleMessageEdited(sender, e, connection);
         }
 
         static void Respond(Connection connection, TelegramBotArgs.MessageEventArgs messageEvent, Func<Task> response)
@@ -142,11 +154,11 @@ namespace Ollio.Helpers
                 DateTime taskStartTime = DateTime.Now;
                 respondTask.Start();
 
-                while (!respondTask.IsCompleted)
+                /*while (!respondTask.IsCompleted)
                 {
                     if ((DateTime.Now - taskStartTime).Seconds > 0.5)
-                        await connection.Client.SendChatActionAsync(messageEvent.Message.Chat.Id, TelegramBotEnums.ChatAction.Typing);
-                }
+                        await connection.Client.ToggleBusy(request);
+                }*/
             });
 
             waitTask.Start();

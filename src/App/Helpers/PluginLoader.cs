@@ -28,7 +28,7 @@ namespace Ollio.Helpers
             var type = message.Type;
             
             if (
-                message.Type == Message.MessageType.Text &&
+                message.Type == MessageType.Text &&
                 message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
                 (
                     (message.EventType == EventType.Message && message.Text.StartsWith(connection.Context.Config.Prefix)) ||
@@ -73,19 +73,19 @@ namespace Ollio.Helpers
             {
                 switch (type)
                 {
-                    case Message.MessageType.Audio:
+                    case MessageType.Audio:
                         triggers = Plugins.Where(p => p.Key.OnAudio == true);
                         break;
-                    case Message.MessageType.Document:
+                    case MessageType.Document:
                         triggers = Plugins.Where(p => p.Key.OnDocument == true);
                         break;
-                    case Message.MessageType.Photo:
+                    case MessageType.Photo:
                         triggers = Plugins.Where(p => p.Key.OnPhoto == true);
                         break;
-                    case Message.MessageType.Sticker:
+                    case MessageType.Sticker:
                         triggers = Plugins.Where(p => p.Key.OnSticker == true);
                         break;
-                    case Message.MessageType.Text:
+                    case MessageType.Text:
                         triggers = Plugins.Where(p => p.Key.OnText == true);
                         break;
                 }
@@ -156,17 +156,17 @@ namespace Ollio.Helpers
 
                 if (connection.Plugins.Contains(plugin.Id))
                 {
-                    Write.Debug($"{plugin.Id}: Triggering OnInit()");
-                    plugin.OnInit();
-                    plugin.OnInit(castedConnected);
+                    Write.Debug($"{plugin.Id}: Triggering OnConnectt()");
+                    plugin.OnConnect();
+                    plugin.OnConnect(castedConnected);
 
-                    Write.Debug($"{plugin.Id}: Triggering OnInitAsync()");
-                    var onInitTask = plugin.OnInitAsync();
-                    var onInitTaskWithConnection = plugin.OnInitAsync(castedConnected);
-                    if (onInitTask != null)
-                        await onInitTask;
-                    if (onInitTaskWithConnection != null)
-                        await onInitTaskWithConnection;
+                    Write.Debug($"{plugin.Id}: Triggering OnConnectAsync()");
+                    var onConnectTask = plugin.OnConnectAsync();
+                    var onConnectTaskWithConnection = plugin.OnConnectAsync(castedConnected);
+                    if (onConnectTask != null)
+                        await onConnectTask;
+                    if (onConnectTaskWithConnection != null)
+                        await onConnectTaskWithConnection;
 
                     Task tickTask = new Task(async () =>
                     {
@@ -191,10 +191,10 @@ namespace Ollio.Helpers
                                     Write.Debug(response.Text);
 
                                 if (response != null)
-                                    await TelegramHelpers.SendMessage(response, connection);
+                                    await ClientHelpers.SendMessage(response, connection);
 
                                 if (responseAsync != null)
-                                    await TelegramHelpers.SendMessage(responseAsync, connection);
+                                    await ClientHelpers.SendMessage(responseAsync, connection);
 
                                 tickRate = 3000;
                                 Thread.Sleep(tickRate);
@@ -236,7 +236,10 @@ namespace Ollio.Helpers
 
                 foreach (var plugin in loadedPlugins)
                     if (pluginsToLoad.Contains(plugin.Id) && plugin.Subscription != null)
+                    {   
+                        plugin.OnInit();
                         Plugins.Add(plugin.Subscription, plugin);
+                    }
 
                 count = Plugins.Count();
             }

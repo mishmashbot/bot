@@ -1,6 +1,5 @@
 using Ollio.Common.Enums;
 using TelegramBotArgs = Telegram.Bot.Args;
-using TelegramBotEnums = Telegram.Bot.Types.Enums;
 using TelegramBotTypes = Telegram.Bot.Types;
 
 namespace Ollio.Common.Models
@@ -11,15 +10,8 @@ namespace Ollio.Common.Models
         public new bool IsForwarded { get; set; }
         public new MessageType Type { get; set; }
 
-        public enum MessageType {
-            Audio = TelegramBotEnums.MessageType.Audio,
-            Document = TelegramBotEnums.MessageType.Document,
-            Photo = TelegramBotEnums.MessageType.Photo,
-            Sticker = TelegramBotEnums.MessageType.Sticker,
-            Text = TelegramBotEnums.MessageType.Text
-        }
 
-        public void CreateMessage(TelegramBotArgs.MessageEventArgs messageEvent, Connection connection)
+        public void CreateMessage(TelegramBotArgs.MessageEventArgs messageEvent)
         {
             var m = messageEvent.Message;
 

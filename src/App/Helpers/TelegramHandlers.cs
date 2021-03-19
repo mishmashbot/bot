@@ -17,7 +17,7 @@ namespace Ollio.Helpers
             {
                 List<HistoryMessage> historyMessages = new List<HistoryMessage>();
                 Message message = new Message();
-                message.CreateMessage(messageEvent, connection);
+                message.CreateMessage(messageEvent);
 
                 List<PluginResponse> responses = await PluginLoader.Invoke(message, connection);
 
@@ -28,7 +28,7 @@ namespace Ollio.Helpers
                         if (response.ChatId == 0)
                             response.ChatId = messageEvent.Message.Chat.Id;
 
-                        var messageResult = await TelegramHelpers.SendMessage(response, connection);
+                        var messageResult = await ClientHelpers.SendMessage(response, connection);
                         historyMessages.Add(new HistoryMessage {
                             ChatId = messageResult.Chat.Id,
                             MessageId = messageResult.MessageId
@@ -111,7 +111,7 @@ namespace Ollio.Helpers
                         Text = $@"🚫 {exception.Message}<br /><c>{reference}</c><br /><hr /><br /><b>{remark}</b>"
                     };
 
-                    await TelegramHelpers.SendMessage(response, connection);
+                    await ClientHelpers.SendMessage(response, connection);
                 };
             }
         }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Ollio.Common.Enums;
 
 namespace Ollio.Common.Models
 {
@@ -12,7 +13,7 @@ namespace Ollio.Common.Models
         public int ReplyToMessageId { get; set; }
         public bool Silent { get; set; }
         public string Text { get; set; }
-        public Message.MessageType Type { get; set; } = Message.MessageType.Text;
+        public MessageType Type { get; set; } = MessageType.Text;
 
         public void CreatePhotoResponse(
             UploadFile file,
@@ -29,7 +30,7 @@ namespace Ollio.Common.Models
             File = file;
             ReplyToMessageId = replyToMessageId;
             Text = caption;
-            Type = Message.MessageType.Photo;
+            Type = MessageType.Photo;
         }
 
         public void CreatePhotoResponse(
@@ -82,7 +83,7 @@ namespace Ollio.Common.Models
             DisableNotification = disableNotification;
             DisableWebpagePreview = disableWebpagePreview;
             ReplyToMessageId = replyToMessageId;
-            Type = Message.MessageType.Text;
+            Type = MessageType.Text;
             Text = text;
         }
     }
