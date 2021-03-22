@@ -25,6 +25,7 @@ namespace Ollio.Helpers
             var connection = new Connection
             {
                 Id = botConfig.Id,
+                Instance = instance,
                 Plugins = botConfig.Plugins,
                 Token = botConfig.Client.Token
             };
@@ -60,7 +61,6 @@ namespace Ollio.Helpers
             if (apiTestResult)
             {
                 connection.Instance.Me = await connection.Client.GetMeAsync();
-
                 Write.Success($"{connection.Id}: Connected as @{connection.Instance.Me.Username} ({connection.Instance.Me.Id})");
                 hasConnected = true;
             }
