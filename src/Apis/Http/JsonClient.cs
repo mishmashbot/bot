@@ -35,7 +35,6 @@ namespace Ollio.Apis.Http
             {
                 Content = result.Content,
                 Data = deserialized,
-                IsSuccess = result.IsSuccess,
                 Response = result.Response
             };
         }
