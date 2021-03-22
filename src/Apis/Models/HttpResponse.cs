@@ -6,7 +6,6 @@ namespace Ollio.Apis.Models
     public class HttpResponse
     {
         public Stream Content { get; set; }
-        public bool IsSuccess { get; set; }
         public HttpResponseMessage Response { get; set; }
     }
 }

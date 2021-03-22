@@ -62,10 +62,14 @@ namespace Ollio.Apis.Http
             var response = await Client.SendAsync(request);
             var content = await response.Content.ReadAsStreamAsync();
 
+            if(!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"{response.StatusCode} ({response.ReasonPhrase})");
+            }
+
             return new HttpResponse
             {
                 Content = content,
-                IsSuccess = response.IsSuccessStatusCode,
                 Response = response
             };
         }
