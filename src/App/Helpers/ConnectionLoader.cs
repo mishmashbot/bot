@@ -16,9 +16,14 @@ namespace Ollio.Helpers
     {
         public async static Task<bool> CreateConnection(ConfigModels.Bot botConfig)
         {
-            var connection = new Connection
+            var instance = new Instance
             {
                 Config = botConfig,
+                RuntimeInfo = Program.RuntimeInfo
+            };
+
+            var connection = new Connection
+            {
                 Id = botConfig.Id,
                 Plugins = botConfig.Plugins,
                 Token = botConfig.Client.Token
@@ -54,8 +59,9 @@ namespace Ollio.Helpers
 
             if (apiTestResult)
             {
-                connection.Me = await connection.Client.GetMeAsync();
-                Write.Success($"{connection.Id}: Connected as @{connection.Me.Username} ({connection.Me.Id})");
+                connection.Instance.Me = await connection.Client.GetMeAsync();
+
+                Write.Success($"{connection.Id}: Connected as @{connection.Instance.Me.Username} ({connection.Instance.Me.Id})");
                 hasConnected = true;
             }
             else

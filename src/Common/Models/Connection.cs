@@ -8,10 +8,9 @@ namespace Ollio.Common.Models
 {
     public class Connection
     {
-        public ConfigModels.Bot Config { get; set; }
         public TelegramBot.ITelegramBotClient Client { get; set; }
         public string Id { get; set; }
-        public TelegramBotTypes.User Me { get; set; }
+        public Instance Instance { get; set; }
         public List<string> Plugins { get; set; } = new List<string>();
         public Task Task { get; set; }
         public string Token { get; set; }

@@ -61,7 +61,7 @@ namespace Ollio.Helpers
             //IDictionary<string, string> commands = new Dictionary<string, string>();
             List<TelegramBotTypes.BotCommand> botCommands = new List<TelegramBotTypes.BotCommand>();
 
-            if (connection.Config.Client.Prefix == '/')
+            if (connection.Instance.Config.Client.Prefix == '/')
             {
                 foreach (var plugin in PluginLoader.GetPlugins())
                 {
@@ -86,7 +86,7 @@ namespace Ollio.Helpers
 #if DEBUG
             foreach (var command in botCommands)
             {
-                Write.Debug($"Set command ({connection.Me.Id}): {command.Command} - {command.Description}");
+                Write.Debug($"Set command ({connection.Instance.Me.Id}): {command.Command} - {command.Description}");
             }
 #endif
         }

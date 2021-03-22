@@ -28,12 +28,12 @@ namespace Ollio.Helpers
                 message.Type == MessageType.Text &&
                 message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
                 (
-                    (message.EventType == EventType.Message && message.Text.StartsWith(connection.Config.Client.Prefix)) ||
+                    (message.EventType == EventType.Message && message.Text.StartsWith(connection.Instance.Config.Client.Prefix)) ||
                     message.EventType == EventType.Callback
                 )
             )
             {
-                Regex commandRegex = new Regex(@$"^(?<cmd>\{connection.Config.Client.Prefix}\w*|\w*:)(?:$|@{connection.Me.Username})?(?:$|\s)?(?<args>.*)");
+                Regex commandRegex = new Regex(@$"^(?<cmd>\{connection.Instance.Config.Client.Prefix}\w*|\w*:)(?:$|@{connection.Instance.Me.Username})?(?:$|\s)?(?<args>.*)");
                 Match commandMatch = commandRegex.Match(message.Text);
 
                 if (commandMatch.Success)
@@ -44,7 +44,7 @@ namespace Ollio.Helpers
                     command = new Command
                     {
                         Argument = (argsGroup != null) ? argsGroup.Value : "",
-                        Directive = (cmdGroup != null) ? cmdGroup.Value.ToLower().Replace(connection.Config.Client.Prefix.ToString(), "") : "" // NOTE: This should never be null, but it looks nicer
+                        Directive = (cmdGroup != null) ? cmdGroup.Value.ToLower().Replace(connection.Instance.Config.Client.Prefix.ToString(), "") : "" // NOTE: This should never be null, but it looks nicer
                     };
 
                     switch (message.EventType)
@@ -98,9 +98,8 @@ namespace Ollio.Helpers
                         PluginEntities.Request request = new PluginEntities.Request
                         {
                             Command = command,
-                            Message = message,
-                            Me = connection.Me,
-                            RuntimeInfo = Program.RuntimeInfo
+                            Instance = connection.Instance,
+                            Message = message
                         };
 
                         switch (message.EventType)
