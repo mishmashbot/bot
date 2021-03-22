@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Telegram.Bot.Args;
 using Ollio.Common;
 using Ollio.Common.Models;
 using Ollio.State;
 using Ollio.Utilities;
+using TelegramBotArgs = Telegram.Bot.Args;
 
 namespace Ollio.Helpers
 {
-    public class TelegramHandlers
+    public class ClientHandlers
     {
-        public static async Task HandleMessage(object sender, MessageEventArgs messageEvent, Connection connection)
+        public static async Task HandleMessage(object sender, TelegramBotArgs.MessageEventArgs messageEvent, Connection connection)
         {
             try
             {
@@ -44,39 +44,7 @@ namespace Ollio.Helpers
             }
         }
 
-        //public static async Task HandleMessageEdited(object sender, MessageEventArgs messageEvent, Connection connection)
-        //{
-            /*try
-            {
-                var testGuid = Guid.NewGuid();
-                Message message = new Message();
-                message.CreateMessage(messageEvent, connection);
-
-                var update = MessageHistory.Update(messageEvent.Message.MessageId);
-                if(update != null)
-                {
-                    List<PluginResponse> responses = await PluginLoader.Invoke(message, connection);
-
-                    foreach(var historyMessage in update.Messages)
-                    {
-                        //var editedResult = await TelegramHelpers.EditMessage(historyMessage, )
-                        case Message.MessageType.Text:
-                            await connection.Client.EditMessageTextAsync(
-                                historyMessage.ChatId, historyMessage.MessageId,
-                                $"Changed: {testGuid}",
-                                DefaultParseMode
-                            );
-                            break;
-                    }
-                }
-            } 
-            catch(Exception e)
-            {
-                await HandleError(e, messageEvent, connection);
-            }*/
-        //}
-
-        static async Task HandleError(Exception exception, MessageEventArgs messageEvent, Connection connection)
+        static async Task HandleError(Exception exception, TelegramBotArgs.MessageEventArgs messageEvent, Connection connection)
         {
             bool throwError = true;
             Guid reference = Guid.NewGuid();
@@ -115,5 +83,37 @@ namespace Ollio.Helpers
                 };
             }
         }
+
+        //public static async Task HandleMessageEdited(object sender, MessageEventArgs messageEvent, Connection connection)
+        //{
+            /*try
+            {
+                var testGuid = Guid.NewGuid();
+                Message message = new Message();
+                message.CreateMessage(messageEvent, connection);
+
+                var update = MessageHistory.Update(messageEvent.Message.MessageId);
+                if(update != null)
+                {
+                    List<PluginResponse> responses = await PluginLoader.Invoke(message, connection);
+
+                    foreach(var historyMessage in update.Messages)
+                    {
+                        //var editedResult = await TelegramHelpers.EditMessage(historyMessage, )
+                        case Message.MessageType.Text:
+                            await connection.Client.EditMessageTextAsync(
+                                historyMessage.ChatId, historyMessage.MessageId,
+                                $"Changed: {testGuid}",
+                                DefaultParseMode
+                            );
+                            break;
+                    }
+                }
+            } 
+            catch(Exception e)
+            {
+                await HandleError(e, messageEvent, connection);
+            }*/
+        //}
     }
 }

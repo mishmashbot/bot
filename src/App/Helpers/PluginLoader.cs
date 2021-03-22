@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using Ollio.Common;
 using Ollio.Common.Enums;
@@ -17,26 +16,24 @@ namespace Ollio.Helpers
 {
     public static class PluginLoader
     {
-        public static Dictionary<PluginSubscription, PluginEntities.IPlugin> Plugins { get; set; }
+        static List<PluginEntities.IPlugin> Plugins { get; set; }
 
         public static async Task<List<PluginResponse>> Invoke(Message message, Connection connection)
         {
             Command command = null;
-            bool isCommand = false;
+            IEnumerable<PluginEntities.IPlugin> foundPlugins = null;
             List<PluginResponse> responses = new List<PluginResponse>();
-            IEnumerable<KeyValuePair<PluginSubscription, PluginEntities.IPlugin>> triggers = null;
-            var type = message.Type;
-            
+
             if (
                 message.Type == MessageType.Text &&
                 message.Text != null && // NOTE: For safety in case MessageType is Text for some reason
                 (
-                    (message.EventType == EventType.Message && message.Text.StartsWith(connection.Context.Config.Prefix)) ||
+                    (message.EventType == EventType.Message && message.Text.StartsWith(connection.Config.Client.Prefix)) ||
                     message.EventType == EventType.Callback
                 )
             )
             {
-                Regex commandRegex = new Regex(@$"^(?<cmd>\{connection.Context.Config.Prefix}\w*|\w*:)(?:$|@{connection.Context.Me.Username})?(?:$|\s)?(?<args>.*)");
+                Regex commandRegex = new Regex(@$"^(?<cmd>\{connection.Config.Client.Prefix}\w*|\w*:)(?:$|@{connection.Me.Username})?(?:$|\s)?(?<args>.*)");
                 Match commandMatch = commandRegex.Match(message.Text);
 
                 if (commandMatch.Success)
@@ -47,55 +44,50 @@ namespace Ollio.Helpers
                     command = new Command
                     {
                         Argument = (argsGroup != null) ? argsGroup.Value : "",
-                        Directive = (cmdGroup != null) ? cmdGroup.Value.ToLower().Replace(connection.Context.Config.Prefix.ToString(), "") : "" // NOTE: This should never be null, but it looks nicer
+                        Directive = (cmdGroup != null) ? cmdGroup.Value.ToLower().Replace(connection.Config.Client.Prefix.ToString(), "") : "" // NOTE: This should never be null, but it looks nicer
                     };
 
                     switch (message.EventType)
                     {
                         case EventType.Callback:
                             command.Arguments = command.Argument.Split(":");
-                            triggers = Plugins
-                                .Where(p => p.Key.Callbacks.Contains(command.Directive));
+                            foundPlugins = Plugins
+                                .Where(p => p.Subscription.Callbacks.Contains(command.Directive));
                             break;
                         case EventType.Message:
                             command.Arguments = command.Argument.Split(" ");
-                            triggers = Plugins
-                                .Where(p => p.Key.Commands.ContainsKey(command.Directive));
+                            foundPlugins = Plugins
+                                .Where(p => p.Subscription.Commands.ContainsKey(command.Directive));
                             break;
                     }
-
-                    if (triggers != null)
-                        isCommand = true;
                 }
             }
-
-            if (!isCommand)
+            else
             {
-                switch (type)
+                switch (message.Type)
                 {
                     case MessageType.Audio:
-                        triggers = Plugins.Where(p => p.Key.OnAudio == true);
+                        foundPlugins = Plugins.Where(p => p.Subscription.OnAudio == true);
                         break;
                     case MessageType.Document:
-                        triggers = Plugins.Where(p => p.Key.OnDocument == true);
+                        foundPlugins = Plugins.Where(p => p.Subscription.OnDocument == true);
                         break;
                     case MessageType.Photo:
-                        triggers = Plugins.Where(p => p.Key.OnPhoto == true);
+                        foundPlugins = Plugins.Where(p => p.Subscription.OnPhoto == true);
                         break;
                     case MessageType.Sticker:
-                        triggers = Plugins.Where(p => p.Key.OnSticker == true);
+                        foundPlugins = Plugins.Where(p => p.Subscription.OnSticker == true);
                         break;
                     case MessageType.Text:
-                        triggers = Plugins.Where(p => p.Key.OnText == true);
+                        foundPlugins = Plugins.Where(p => p.Subscription.OnText == true);
                         break;
                 }
             }
 
-            if (triggers != null)
+            if (foundPlugins != null)
             {
-                foreach (var trigger in triggers)
+                foreach (var plugin in foundPlugins)
                 {
-                    PluginEntities.IPlugin plugin = trigger.Value; // NOTE: For readability
                     bool isValidPlugin = connection.Plugins.Contains(plugin.Id);
 
                     if (isValidPlugin)
@@ -106,14 +98,12 @@ namespace Ollio.Helpers
                         PluginEntities.Request request = new PluginEntities.Request
                         {
                             Command = command,
-                            Context = connection.Context,
                             Message = message
                         };
 
                         switch (message.EventType)
                         {
                             case EventType.Message:
-                                // INVESTIGATE: Is firing both of these slow?
                                 response = plugin.OnMessage(request);
                                 var responseAsyncTask = plugin.OnMessageAsync(request);
                                 if (responseAsyncTask != null)
@@ -135,88 +125,37 @@ namespace Ollio.Helpers
 
         public static async Task Init(Connection connection)
         {
-            PluginEntities.Connection castedConnected = new PluginEntities.Connection
+            PluginEntities.Connection castedConnection = new PluginEntities.Connection
             {
                 Client = connection.Client,
-                Context = connection.Context,
                 Id = connection.Id,
                 Plugins = connection.Plugins,
                 Task = connection.Task,
                 Token = connection.Token
             };
 
-            PluginEntities.Request request = new PluginEntities.Request
+            foreach (var plugin in Plugins)
             {
-                Context = connection.Context
-            };
-
-            foreach (var trigger in Plugins)
-            {
-                var plugin = trigger.Value;
-
-                if (connection.Plugins.Contains(plugin.Id))
+                if(connection.Plugins.Contains(plugin.Id))
                 {
-                    Write.Debug($"{plugin.Id}: Triggering OnConnectt()");
-                    plugin.OnConnect();
-                    plugin.OnConnect(castedConnected);
-
-                    Write.Debug($"{plugin.Id}: Triggering OnConnectAsync()");
-                    var onConnectTask = plugin.OnConnectAsync();
-                    var onConnectTaskWithConnection = plugin.OnConnectAsync(castedConnected);
-                    if (onConnectTask != null)
-                        await onConnectTask;
-                    if (onConnectTaskWithConnection != null)
-                        await onConnectTaskWithConnection;
-
-                    Task tickTask = new Task(async () =>
-                    {
-                        // TODO: Use a timer instead
-                        //       Need to work out why it doesn't work though: when a command is processed,
-                        //        the timer seems to stop
-                        int tickRate = 0;
-
-                        try
-                        {
-                            while (connection != null)
-                            {
-                                PluginResponse response = null;
-                                PluginResponse responseAsync = null;
-
-                                response = plugin.OnTick(request);
-                                var responseAsyncTask = plugin.OnTickAsync(request);
-                                if (responseAsyncTask != null)
-                                    responseAsync = await responseAsyncTask;
-
-                                if (response != null)
-                                    Write.Debug(response.Text);
-
-                                if (response != null)
-                                    await ClientHelpers.SendMessage(response, connection);
-
-                                if (responseAsync != null)
-                                    await ClientHelpers.SendMessage(responseAsync, connection);
-
-                                tickRate = 3000;
-                                Thread.Sleep(tickRate);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            if (e.Message.Contains("429 (Too Many Requests)"))
-                                tickRate = tickRate + 3000;
-
-                            Write.Error(e);
-                        }
-                    });
-
-                    tickTask.Start();
+                    plugin.OnInit();
+                    plugin.OnInit(castedConnection);
+                    var onInitAsync = plugin.OnInitAsync(castedConnection);
+                    if (onInitAsync != null)
+                        await onInitAsync;
                 }
             }
+
+        }
+
+        public static List<PluginEntities.IPlugin> GetPlugins()
+        {
+            return Plugins;
         }
 
         public static int UpdatePlugins()
         {
-            Plugins = new Dictionary<PluginSubscription, PluginEntities.IPlugin>();
+            Plugins = new List<PluginEntities.IPlugin>();
             List<string> pluginsToLoad = new List<string>();
             int count = 0;
 
@@ -236,10 +175,7 @@ namespace Ollio.Helpers
 
                 foreach (var plugin in loadedPlugins)
                     if (pluginsToLoad.Contains(plugin.Id) && plugin.Subscription != null)
-                    {   
-                        plugin.OnInit();
-                        Plugins.Add(plugin.Subscription, plugin);
-                    }
+                        Plugins.Add(plugin);
 
                 count = Plugins.Count();
             }

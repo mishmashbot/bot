@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Ollio.Plugin
 {
@@ -8,19 +7,15 @@ namespace Ollio.Plugin
         string Id { get; }
         string Name { get; }
         Subscription Subscription { 
-            get => new Subscription();
-            set => new Subscription();
+            get { return Subscription; }
+            set { Subscription = value; }
         }
         int Version { get; }
     
         void OnInit() { }
-        void OnConnect() { }
-        void OnConnect(Connection connection) { }
-        Task OnConnectAsync() { return null; }
-        Task OnConnectAsync(Connection connection) { return null; }
-        // OnDisconnect?
-        Response OnTick(Request request) { return null; }
-        Task<Response> OnTickAsync(Request request) { return null; }
+        void OnInit(Connection connection) { }
+        Task OnInitAsync() { return null; }
+        Task OnInitAsync(Connection connection) { return null; }
         Response OnMessage(Request request) { return null; }
         Task<Response> OnMessageAsync(Request request) { return null; }
     }
