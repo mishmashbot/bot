@@ -6,10 +6,7 @@ namespace Ollio.Plugin
     {
         string Id { get; }
         string Name { get; }
-        Subscription Subscription { 
-            get { return Subscription; }
-            set { Subscription = value; }
-        }
+        Subscription Subscription { get => new Subscription(); }
         int Version { get; }
     
         void OnInit() { }

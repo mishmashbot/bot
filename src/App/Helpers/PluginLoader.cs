@@ -98,7 +98,9 @@ namespace Ollio.Helpers
                         PluginEntities.Request request = new PluginEntities.Request
                         {
                             Command = command,
-                            Message = message
+                            Message = message,
+                            Me = connection.Me,
+                            RuntimeInfo = Program.RuntimeInfo
                         };
 
                         switch (message.EventType)
