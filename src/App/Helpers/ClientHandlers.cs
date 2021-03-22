@@ -61,11 +61,10 @@ namespace Ollio.Helpers
                         "Abort, Retry, Fail?",
                         "Enhance your calm",
                         "FUBAR",
-                        "Have you tried turning it off and on again?",
                         "It's not supposed to do that",
                         "lp0 on fire",
                         "Not a typewriter",
-                        "PEBCAK",
+                        "Oops!",
                         "She's dead, Jim!",
                         "сука блят"
                     }
@@ -76,7 +75,7 @@ namespace Ollio.Helpers
                     PluginResponse response = new PluginResponse
                     {
                         ChatId = messageEvent.Message.Chat.Id,
-                        Text = $@"🚫 {exception.Message}<br /><c>{reference}</c><br /><hr /><br /><b>{remark}</b>"
+                        Text = $@"🚫 <b>{remark}</b><br /><hr /><br />{exception.Message}<br /><hr /><br /><c>{reference}</c>"
                     };
 
                     await ClientHelpers.SendMessage(response, connection);

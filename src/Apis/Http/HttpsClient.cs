@@ -64,7 +64,7 @@ namespace Ollio.Apis.Http
 
             if(!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException($"{response.StatusCode} ({response.ReasonPhrase})");
+                throw new HttpRequestException($"{(int)response.StatusCode} ({response.ReasonPhrase}) — {request.Method}: {request.RequestUri}");
             }
 
             return new HttpResponse
